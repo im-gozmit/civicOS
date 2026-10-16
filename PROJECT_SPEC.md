@@ -1,6 +1,6 @@
 # CivicOS — Project Specification and Coding-Agent Handoff (v2)
 
-> **Purpose:** Single source of truth for Claude Code, OpenAI Codex, and human contributors building CivicOS as a **fresh project** in this folder within a 42-hour hackathon.
+> **Purpose:** Single source of truth for AI coding agents and human contributors building CivicOS as a **fresh project** in this folder within a 42-hour hackathon.
 >
 > **Tagline:** Report. Track. Resolve.
 >
@@ -705,7 +705,7 @@ Work starts with the **human owner kicking off Meta setup in parallel** (§5.2),
 
 If behind schedule, cut in this order: analytics → OSM signals → perceptual hashing → verification polish → real Meta integration (keep simulator). Do **not** cut persistence, tracking, admin authorization, the end-to-end demo, or the privacy basics.
 
-## 14. Parallel Work With Claude Code and OpenAI Codex
+## 14. Parallel Work With AI Coding Agents
 
 One repo, one spec, explicit file ownership; do not ask both agents to build everything.
 
