@@ -1,13 +1,13 @@
 export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" className={className} role="img" aria-label="CivicOS logo">
+    <svg viewBox="0 0 40 40" className={className} role="img" aria-label="Sudhaar logo">
       <defs>
-        <linearGradient id="civicos-g" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="sudhaar-g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#f15a14" />
           <stop offset="1" stopColor="#cf3d0f" />
         </linearGradient>
       </defs>
-      <rect width="40" height="40" rx="11" fill="url(#civicos-g)" />
+      <rect width="40" height="40" rx="11" fill="url(#sudhaar-g)" />
       <path
         d="M20 8.5c-4.7 0-8.5 3.7-8.5 8.3 0 5.9 6.7 12.2 7.6 13a1.3 1.3 0 0 0 1.8 0c.9-.8 7.6-7.1 7.6-13 0-4.6-3.8-8.3-8.5-8.3Z"
         fill="#fff"
@@ -22,7 +22,7 @@ export function Logo({ className = "", onDark = false }: { className?: string; o
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <LogoMark />
       <span className={`font-display text-xl font-extrabold tracking-tight ${onDark ? "text-white" : "text-slate-900"}`}>
-        Civic<span className={onDark ? "text-orange-400" : "text-teal-600"}>OS</span>
+        Sudh<span className={onDark ? "text-orange-400" : "text-teal-600"}>aar</span>
       </span>
     </span>
   );

@@ -1,4 +1,4 @@
-# CivicOS
+# Sudhaar
 
 **Report. Track. Resolve.** An AI-assisted civic issue reporting platform, starting with Prayagraj, Uttar Pradesh.
 
@@ -158,7 +158,7 @@ PROJECT_SPEC.md                   full product and engineering spec
 - The public map shows approximate positions (rounded and offset by roughly 100 m), the type of problem, a status label and the day of the report. No photos, text, ticket or tracking numbers, or contact details. Duplicate and rejected reports are hidden.
 - Photos and voice notes are private: only a signed-in admin can open them.
 - AI output is a suggestion. Staff verify the team and decide on closure; internal notes are never shown to citizens.
-- Departments shown to citizens are labelled demo queues. CivicOS does not claim a government department has received a complaint.
+- Departments shown to citizens are labelled demo queues. Sudhaar does not claim a government department has received a complaint.
 
 ## Roadmap
 

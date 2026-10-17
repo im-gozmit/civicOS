@@ -7,7 +7,7 @@ import { rateClear, rateCount, rateRecord } from "@/lib/rateLimit";
 // variables. There is no signup and no role is ever read from a request. Replaced by Supabase
 // Auth with a profiles table later.
 
-export const ADMIN_COOKIE = "civicos_admin";
+export const ADMIN_COOKIE = "sudhaar_admin";
 const SESSION_MS = 12 * 60 * 60 * 1000;
 
 function secret(): string {

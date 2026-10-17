@@ -8,10 +8,10 @@ const display = Fraunces({ variable: "--font-display", subsets: ["latin"], style
 const deva = Noto_Sans_Devanagari({ variable: "--font-deva", subsets: ["devanagari"] });
 
 export const metadata: Metadata = {
-  title: { default: "CivicOS: Report. Track. Resolve.", template: "%s · CivicOS" },
+  title: { default: "Sudhaar: Report. Track. Resolve.", template: "%s · Sudhaar" },
   description:
     "Report a pothole, garbage pile, blocked drain or broken street light in Prayagraj with a photo. AI suggests the right team, staff verify it, and you get updates on WhatsApp.",
-  applicationName: "CivicOS",
+  applicationName: "Sudhaar",
 };
 
 export const viewport: Viewport = {

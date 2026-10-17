@@ -47,7 +47,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-slate-100">
         <p className="container-page py-4 text-xs leading-relaxed text-slate-500">
-          CivicOS is a demo service for Prayagraj. The teams shown are demo queues, not official government departments, and a report
+          Sudhaar is a demo service for Prayagraj. The teams shown are demo queues, not official government departments, and a report
           here does not mean a department has accepted it.
         </p>
       </div>

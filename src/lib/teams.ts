@@ -1,7 +1,7 @@
 import type { Category } from "@/lib/types";
 
 // The fixed list of domains/teams a report can be routed to. These are DEMO queues inside
-// CivicOS, not official departments. The AI only ever suggests one of these ids; a staff member
+// Sudhaar, not official departments. The AI only ever suggests one of these ids; a staff member
 // confirms or corrects it before the citizen is told anything about assignment.
 
 export const TEAM_IDS = [

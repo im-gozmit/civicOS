@@ -88,7 +88,7 @@ async function Tracker({ params }: { params: Promise<{ token: string }> }) {
 
       <p className="flex gap-2.5 rounded-2xl border border-slate-200 bg-white/70 p-4 text-xs leading-relaxed text-slate-500">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        Keep this link private: anyone who has it can see this page. CivicOS is a demo service; the team shown is a demo queue and not an
+        Keep this link private: anyone who has it can see this page. Sudhaar is a demo service; the team shown is a demo queue and not an
         official government department.
       </p>
     </article>

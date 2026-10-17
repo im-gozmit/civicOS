@@ -154,7 +154,7 @@ export function IssueMap() {
       <p className="flex gap-2 text-xs leading-relaxed text-slate-500">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         Locations are approximate on purpose, to protect people&apos;s privacy. Duplicate and rejected reports are not shown. These are
-        reports sent to CivicOS, not an official government record.
+        reports sent to Sudhaar, not an official government record.
       </p>
     </div>
   );

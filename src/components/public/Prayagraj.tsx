@@ -60,7 +60,7 @@ export function SangamSection() {
             संगम नगरी की हर गली, हर सड़क के लिए।
           </p>
           <p className="mt-4 max-w-md leading-relaxed text-slate-700">
-            Prayagraj is the city of the Sangam, where the Ganga and Yamuna meet and the unseen Saraswati joins them. CivicOS brings
+            Prayagraj is the city of the Sangam, where the Ganga and Yamuna meet and the unseen Saraswati joins them. Sudhaar brings
             people, photos and city teams together the same way: one place where every report is seen and followed.
           </p>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2">

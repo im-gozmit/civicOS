@@ -241,7 +241,7 @@ function PhoneMock() {
               <MapPin className="h-4 w-4" />
             </span>
             <div className="leading-tight">
-              <p className="text-sm font-semibold">CivicOS</p>
+              <p className="text-sm font-semibold">Sudhaar</p>
               <p className="text-[11px] text-emerald-100">online</p>
             </div>
           </div>

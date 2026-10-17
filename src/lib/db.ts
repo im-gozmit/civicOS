@@ -20,7 +20,7 @@ interface Backend extends Tx {
 }
 
 declare global {
-  var __civicos_db__: Promise<Backend> | undefined;
+  var __sudhaar_db__: Promise<Backend> | undefined;
 }
 
 async function openPostgres(url: string): Promise<Backend> {
@@ -60,11 +60,11 @@ async function openPglite(): Promise<Backend> {
 }
 
 export function getDb(): Promise<Backend> {
-  if (!globalThis.__civicos_db__) {
+  if (!globalThis.__sudhaar_db__) {
     const url = process.env.DATABASE_URL;
-    globalThis.__civicos_db__ = url ? openPostgres(url) : openPglite();
+    globalThis.__sudhaar_db__ = url ? openPostgres(url) : openPglite();
   }
-  return globalThis.__civicos_db__;
+  return globalThis.__sudhaar_db__;
 }
 
 export async function transaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
@@ -77,9 +77,9 @@ export async function query<T = Row>(text: string, params?: unknown[]): Promise<
 
 /** Closes connections so a command-line script can exit cleanly. */
 export async function closeDb(): Promise<void> {
-  const pending = globalThis.__civicos_db__;
+  const pending = globalThis.__sudhaar_db__;
   if (!pending) return;
-  globalThis.__civicos_db__ = undefined;
+  globalThis.__sudhaar_db__ = undefined;
   await (await pending).close();
 }
 

@@ -4,7 +4,7 @@ import path from "path";
 
 // Runs BEFORE any test file or app module is loaded, so the app can never touch the real .data
 // folder. (Setting these inside the test file is too late: static imports are evaluated first.)
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "civicos-test-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "sudhaar-test-"));
 process.env.SESSION_SECRET = "x".repeat(40);
 process.env.ADMIN_EMAIL = "admin@example.com";
 process.env.ADMIN_PASSWORD = "correct-horse-battery";

@@ -151,7 +151,7 @@ describe("WhatsApp conversation", () => {
     const { withRepo } = await import("@/lib/repo");
     const who = person();
     await handleInbound(msg(who, { type: "text", text: "hello" }));
-    expect(textsTo(who.from).at(-1)?.text).toContain("Welcome to CivicOS");
+    expect(textsTo(who.from).at(-1)?.text).toContain("Welcome to Sudhaar");
     const conv = await withRepo((r) => r.getConversation(who.senderKey));
     expect(Date.now() - Date.parse(conv?.lastInboundAt ?? "")).toBeLessThan(5000);
   });

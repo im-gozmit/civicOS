@@ -23,7 +23,7 @@ const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 // --- Replies -----------------------------------------------------------------------------------
 
 const HELP =
-  "👋 Welcome to CivicOS.\n" +
+  "👋 Welcome to Sudhaar.\n" +
   "To report a problem: send a *photo* (add a short caption if you like) and then share the *location* (📎 > Location).\n" +
   "To check a complaint: send *status CIV-000123* or *my complaints*.\n\n" +
   "समस्या दर्ज करने के लिए फ़ोटो भेजें और फिर लोकेशन शेयर करें।";

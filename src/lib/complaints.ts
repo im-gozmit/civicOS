@@ -126,7 +126,7 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
         status: "TRIAGED",
         note: t.aiProvider
           ? `Photo analysed automatically (suggestion only)${t.needsHumanReview ? "; a person will review it" : ""}.`
-          : "Registered in the CivicOS queue; a person will review it.",
+          : "Registered in the Sudhaar queue; a person will review it.",
         actor: "system",
         at: now,
       },

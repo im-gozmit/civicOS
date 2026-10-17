@@ -10,7 +10,7 @@ function HeaderFallback() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-lg">
       <div className="container-page flex h-16 items-center justify-between">
-        <Link href="/" aria-label="CivicOS home">
+        <Link href="/" aria-label="Sudhaar home">
           <Logo />
         </Link>
       </div>

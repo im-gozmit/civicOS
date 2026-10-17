@@ -36,7 +36,7 @@ export function SiteHeader({ whatsappHref }: { whatsappHref: string | null }) {
         Skip to content
       </a>
       <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link href="/" aria-label="CivicOS home">
+        <Link href="/" aria-label="Sudhaar home">
           <Logo onDark={overHero} />
         </Link>
 
