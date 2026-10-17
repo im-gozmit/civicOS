@@ -3,6 +3,7 @@ import { MEDIA_DIR } from "@/lib/localStore";
 import { createComplaint, fallbackAnalysis, resolveTeam } from "@/lib/complaints";
 import type { Analysis } from "@/lib/complaints";
 import { runTriage } from "@/lib/ai/triage";
+import { transcribeAudio } from "@/lib/ai/transcribe";
 import { logEvent } from "@/lib/whatsapp/eventLog";
 import type { Complaint } from "@/lib/types";
 
@@ -19,7 +20,6 @@ export interface ReportInput {
   audioFiles: string[];
   latitude: number;
   longitude: number;
-  transcript?: string;
 }
 
 export type ReportResult =
@@ -30,16 +30,16 @@ function mimeFor(file: string) {
   return /\.png$/i.test(file) ? "image/png" : /\.webp$/i.test(file) ? "image/webp" : "image/jpeg";
 }
 
-async function analyse(input: ReportInput): Promise<{ analysis: Analysis } | { reject: "NOT_CIVIC" | "UNUSABLE"; seen: string }> {
+async function analyse(input: ReportInput, voice: Complaint["voice"]): Promise<{ analysis: Analysis } | { reject: "NOT_CIVIC" | "UNUSABLE"; seen: string }> {
   const first = input.mediaFiles[0];
   const run = await runTriage(
-    { imagePath: path.join(MEDIA_DIR, first), mimeType: mimeFor(first), caption: input.caption, transcript: input.transcript },
+    { imagePath: path.join(MEDIA_DIR, first), mimeType: mimeFor(first), caption: input.caption, transcript: voice ? voice.transcript + " (English: " + voice.english + ")" : undefined },
     (e) => void logEvent(e),
   ).catch((err) => {
     console.error("[report] triage failed", err);
     return null;
   });
-  if (!run) return { analysis: fallbackAnalysis(input.caption || input.transcript || "") };
+  if (!run) return { analysis: fallbackAnalysis(input.caption || voice?.english || "") };
 
   const r = run.result;
   if (!r.isCivicIssue) return { reject: "NOT_CIVIC", seen: r.summaryEn };
@@ -64,7 +64,19 @@ async function analyse(input: ReportInput): Promise<{ analysis: Analysis } | { r
 
 export async function processReport(input: ReportInput): Promise<ReportResult> {
   if (input.mediaFiles.length === 0) return { ok: false, code: "UNUSABLE", seen: "No photo was provided." };
-  const outcome = await analyse(input);
+
+  // Voice note (optional): turn it into text so it can inform the analysis. A failure here just
+  // means we continue without it.
+  let voice: Complaint["voice"];
+  if (input.audioFiles.length > 0) {
+    const t = await transcribeAudio(path.join(MEDIA_DIR, input.audioFiles[0]), (e) => void logEvent(e)).catch((err) => {
+      console.error("[report] transcription failed", err);
+      return null;
+    });
+    if (t) voice = { transcript: t.transcript, english: t.english, language: t.language, provider: t.provider };
+  }
+
+  const outcome = await analyse(input, voice);
   if ("reject" in outcome) return { ok: false, code: outcome.reject, seen: outcome.seen };
   const complaint = await createComplaint(
     {
@@ -76,6 +88,7 @@ export async function processReport(input: ReportInput): Promise<ReportResult> {
       longitude: input.longitude,
       mediaFiles: input.mediaFiles,
       audioFiles: input.audioFiles,
+      voice,
     },
     outcome.analysis,
   );

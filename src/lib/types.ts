@@ -63,9 +63,23 @@ export interface Complaint {
   longitude: number;
   mediaFiles: string[]; // relative paths under .data/media
   audioFiles: string[];
+  repairChecks?: RepairCheck[];
+  voice?: { transcript: string; english: string; language: string; provider: string }; // from the voice note, if any
   createdAt: string;
   history: HistoryEntry[];
   internalNotes?: Array<{ at: string; by: string; text: string }>; // admin-only, never public
+}
+
+/** An "after repair" photo uploaded by staff, with the AI's advisory opinion about it. */
+export interface RepairCheck {
+  file: string;
+  sha256: string;
+  uploadedBy: string;
+  at: string;
+  verdict: "looks_repaired" | "partially_repaired" | "not_repaired" | "cannot_tell";
+  reason: string;
+  aiProvider: string | null;
+  aiModel: string | null;
 }
 
 export interface PendingReport {

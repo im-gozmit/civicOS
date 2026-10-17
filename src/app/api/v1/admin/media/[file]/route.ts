@@ -12,6 +12,8 @@ const TYPES: Record<string, string> = {
   ogg: "audio/ogg",
   mp3: "audio/mpeg",
   m4a: "audio/mp4",
+  webm: "audio/webm",
+  wav: "audio/wav",
 };
 
 // Private evidence: only a signed-in admin can fetch it, and only files that belong to a complaint.
@@ -23,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ fil
   if (!/^[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/.test(file)) return new NextResponse("Bad request", { status: 400 });
 
   const all = await listAll();
-  const known = all.some((c) => c.mediaFiles.includes(file) || c.audioFiles.includes(file));
+  const known = all.some((c) => c.mediaFiles.includes(file) || c.audioFiles.includes(file) || (c.repairChecks ?? []).some((r) => r.file === file));
   if (!known) return new NextResponse("Not found", { status: 404 });
 
   try {

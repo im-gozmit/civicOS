@@ -37,6 +37,7 @@ const T = {
     ticket: "Your complaint number",
     suggested: "Suggested team",
     suggestedNote: "Staff will confirm the team. Keep the link below to follow progress.",
+    heard: "Voice note, as we understood it",
     track: "Track this complaint",
     whatsapp: "Get updates on WhatsApp",
     another: "Report another problem",
@@ -68,6 +69,7 @@ const T = {
     ticket: "आपका शिकायत नंबर",
     suggested: "सुझाई गई टीम",
     suggestedNote: "स्टाफ टीम की पुष्टि करेगा। प्रगति देखने के लिए नीचे का लिंक रखें।",
+    heard: "वॉइस नोट, जैसा हमने समझा",
     track: "इस शिकायत की स्थिति देखें",
     whatsapp: "WhatsApp पर अपडेट पाएं",
     another: "एक और समस्या दर्ज करें",
@@ -83,6 +85,7 @@ interface Success {
   summary: string;
   category: string;
   suggestedTeam: string;
+  voiceHeard?: string | null;
   whatsappLink: string | null;
 }
 
@@ -218,6 +221,11 @@ export function ReportForm() {
           <p className="mt-2 text-sm text-zinc-600">{t.ticket}</p>
           <p className="font-mono text-2xl">{done.ticketId}</p>
           <p className="mt-3 text-sm">{done.summary}</p>
+          {done.voiceHeard ? (
+            <p className="mt-2 text-sm text-zinc-600">
+              {t.heard}: {done.voiceHeard}
+            </p>
+          ) : null}
           <p className="mt-3 text-sm">
             <strong>{t.suggested}:</strong> {done.suggestedTeam}
           </p>

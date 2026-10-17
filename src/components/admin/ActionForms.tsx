@@ -198,3 +198,50 @@ export function QueueForm({ id, current, queues }: { id: string; current: string
     </form>
   );
 }
+
+export function EvidenceForm({ id }: { id: string }) {
+  const router = useRouter();
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    const body = new FormData();
+    body.set("photo", file);
+    const res = await fetch(`/api/v1/admin/complaints/${id}/evidence`, { method: "POST", body });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setBusy(false);
+    if (!res.ok) {
+      setError(data?.error ?? "Upload failed.");
+      return;
+    }
+    setFile(null);
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2">
+      <label className="block text-sm">
+        <span className="text-zinc-600">Photo taken after the repair</span>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="mt-1 block w-full text-sm"
+        />
+      </label>
+      {error ? (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+      <button disabled={!file || busy} className="rounded border border-teal-700 px-3 py-2 text-teal-800 disabled:opacity-50">
+        {busy ? "Comparing with the original photo (about 10 seconds)…" : "Upload and compare"}
+      </button>
+    </form>
+  );
+}

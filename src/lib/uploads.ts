@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { MEDIA_DIR } from "@/lib/localStore";
@@ -32,19 +32,19 @@ export function sniffAudio(buf: Buffer): { ext: string; mime: string } | null {
   return null;
 }
 
-export type SaveResult = { ok: true; file: string; mime: string } | { ok: false; error: string };
+export type SaveResult = { ok: true; file: string; mime: string; sha256: string } | { ok: false; error: string };
 
-async function save(file: File, maxBytes: number, sniff: (b: Buffer) => { ext: string; mime: string } | null, label: string): Promise<SaveResult> {
+async function save(file: File, maxBytes: number, sniff: (b: Buffer) => { ext: string; mime: string } | null, label: string, prefix: string): Promise<SaveResult> {
   if (file.size === 0) return { ok: false, error: `The ${label} is empty.` };
   if (file.size > maxBytes) return { ok: false, error: `The ${label} is too large (max ${Math.round(maxBytes / 1024 / 1024)} MB).` };
   const buf = Buffer.from(await file.arrayBuffer());
   const kind = sniff(buf);
   if (!kind) return { ok: false, error: `That ${label} format is not supported.` };
-  const name = `web-${randomBytes(12).toString("hex")}.${kind.ext}`;
+  const name = `${prefix}-${randomBytes(12).toString("hex")}.${kind.ext}`;
   await mkdir(MEDIA_DIR, { recursive: true });
   await writeFile(path.join(MEDIA_DIR, name), buf);
-  return { ok: true, file: name, mime: kind.mime };
+  return { ok: true, file: name, mime: kind.mime, sha256: createHash("sha256").update(buf).digest("hex") };
 }
 
-export const saveImageUpload = (file: File) => save(file, MAX_IMAGE_BYTES, sniffImage, "photo");
-export const saveAudioUpload = (file: File) => save(file, MAX_AUDIO_BYTES, sniffAudio, "voice note");
+export const saveImageUpload = (file: File, prefix = "web") => save(file, MAX_IMAGE_BYTES, sniffImage, "photo", prefix);
+export const saveAudioUpload = (file: File) => save(file, MAX_AUDIO_BYTES, sniffAudio, "voice note", "web");

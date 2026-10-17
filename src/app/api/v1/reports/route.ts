@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     severity: c.severity,
     suggestedTeam: c.queue,
     needsHumanReview: c.needsHumanReview,
+    voiceHeard: c.voice ? c.voice.english : null,
     whatsappLink: bot ? `https://wa.me/${bot}?text=${encodeURIComponent(`TRACK ${c.ticketId} ${c.trackingToken}`)}` : null,
   });
 }

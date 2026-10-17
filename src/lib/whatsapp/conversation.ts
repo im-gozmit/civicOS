@@ -57,6 +57,7 @@ function successMessage(c: Complaint) {
     `(Staff will confirm the team, and we will message you when they do.)\n` +
     `Severity (suggested): ${c.severity.charAt(0) + c.severity.slice(1).toLowerCase()}\n` +
     `Summary: ${c.summary}\n` +
+    (c.voice ? `Voice note (as we understood it): ${c.voice.english}\n` : "") +
     `Status: received, awaiting staff review\n` +
     (c.needsHumanReview
       ? `Note: ${c.aiProvider ? "the automatic analysis is only a suggestion and" : "automatic analysis was unavailable, so"} a person will review this report.\n`

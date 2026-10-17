@@ -7,7 +7,7 @@ import { TEAM_IDS, TEAM_LABEL } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { withStore } from "@/lib/localStore";
-import { QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
+import { EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 
 export const metadata = { title: "Complaint — CivicOS admin" };
 
@@ -67,6 +67,30 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               className="max-h-72 rounded border border-zinc-200"
             />
           ))}
+        </div>
+      ) : null}
+
+      {c.audioFiles.length > 0 ? (
+        <div className="space-y-2 rounded border border-zinc-200 p-3 text-sm">
+          <p className="font-medium">Voice note</p>
+          {c.audioFiles.map((f) => (
+            <audio key={f} controls src={"/api/v1/admin/media/" + f} className="w-full" />
+          ))}
+          {c.voice ? (
+            <>
+              <p>
+                <span className="text-zinc-500">Heard ({c.voice.language}):</span> {c.voice.transcript}
+              </p>
+              {c.voice.english && c.voice.english !== c.voice.transcript ? (
+                <p>
+                  <span className="text-zinc-500">In English:</span> {c.voice.english}
+                </p>
+              ) : null}
+              <p className="text-xs text-zinc-400">Automatic transcript, may contain mistakes.</p>
+            </>
+          ) : (
+            <p className="text-zinc-500">No transcript available.</p>
+          )}
         </div>
       ) : null}
 
@@ -140,6 +164,51 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           <QueueForm id={c.id} current={c.queue} queues={ALL_QUEUES} />
         </section>
       )}
+
+      {c.status === "IN_PROGRESS" || c.status === "RESOLVED_PENDING_VERIFICATION" || (c.repairChecks?.length ?? 0) > 0 ? (
+        <section className="space-y-3 rounded border border-zinc-200 p-4">
+          <h2 className="font-semibold">Repair evidence</h2>
+          <p className="text-xs text-zinc-500">
+            The AI opinion is advisory. You decide whether the issue is really fixed before closing.
+          </p>
+          {(c.repairChecks ?? []).map((r) => (
+            <div key={r.file} className="flex flex-wrap gap-3 rounded bg-zinc-50 p-3 text-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={"/api/v1/admin/media/" + r.file} alt="Photo after repair" className="max-h-40 rounded border border-zinc-200" />
+              <div className="min-w-48 flex-1">
+                <p>
+                  <span
+                    className={
+                      "rounded px-2 py-0.5 text-xs font-medium " +
+                      (r.verdict === "looks_repaired"
+                        ? "bg-teal-100 text-teal-900"
+                        : r.verdict === "partially_repaired"
+                          ? "bg-amber-100 text-amber-900"
+                          : r.verdict === "not_repaired"
+                            ? "bg-red-100 text-red-900"
+                            : "bg-zinc-200 text-zinc-800")
+                    }
+                  >
+                    {r.verdict === "looks_repaired"
+                      ? "Looks repaired"
+                      : r.verdict === "partially_repaired"
+                        ? "Partly repaired"
+                        : r.verdict === "not_repaired"
+                          ? "Does not look repaired"
+                          : "Cannot tell"}
+                  </span>{" "}
+                  <span className="text-xs text-zinc-500">{r.aiProvider ? "AI opinion" : "no AI available"}</span>
+                </p>
+                <p className="mt-1 text-zinc-700">{r.reason}</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {r.uploadedBy}, {when(r.at)}
+                </p>
+              </div>
+            </div>
+          ))}
+          {c.status === "IN_PROGRESS" || c.status === "RESOLVED_PENDING_VERIFICATION" ? <EvidenceForm id={c.id} /> : null}
+        </section>
+      ) : null}
 
       <section className="space-y-3 rounded border border-zinc-200 p-4">
         <h2 className="font-semibold">Change status</h2>

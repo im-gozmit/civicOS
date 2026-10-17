@@ -3,7 +3,7 @@ import { withStore } from "@/lib/localStore";
 import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
 import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
-import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Severity } from "@/lib/types";
+import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, RepairCheck, Severity } from "@/lib/types";
 
 // --- Triage (placeholder) ---------------------------------------------------------------------
 // Real multimodal AI triage plugs in here later. Until then this is a deterministic keyword guess
@@ -87,6 +87,7 @@ export interface NewComplaintInput {
   longitude: number;
   mediaFiles: string[];
   audioFiles: string[];
+  voice?: { transcript: string; english: string; language: string; provider: string };
 }
 
 export async function createComplaint(input: NewComplaintInput, t: Analysis): Promise<Complaint> {
@@ -137,6 +138,7 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
       longitude: input.longitude,
       mediaFiles: input.mediaFiles,
       audioFiles: input.audioFiles,
+      voice: input.voice,
       createdAt: now,
       history,
     };
@@ -195,6 +197,13 @@ export function changeStatus(
     }
     if (to === "ASSIGNED" && from_isPendingAssignment(c)) {
       return { ok: false as const, error: "Verify the suggested team first (use Confirm or Correct team)." };
+    }
+    const checks = c.repairChecks ?? [];
+    if ((to === "RESOLVED_PENDING_VERIFICATION" || to === "CLOSED") && checks.length === 0) {
+      return { ok: false as const, error: "Upload an after-repair photo first (it is checked against the original photo)." };
+    }
+    if (to === "CLOSED" && checks[checks.length - 1]?.verdict === "not_repaired" && !internalNote.trim()) {
+      return { ok: false as const, error: "The photo check says it does not look repaired. To close anyway, write the reason in the internal note." };
     }
     if (NEEDS_REASON.includes(to) && !publicNote.trim() && !internalNote.trim()) {
       return { ok: false as const, error: `A reason is required for ${to}.` };
@@ -371,5 +380,29 @@ export function bindToSender(ticketId: string, token: string, senderKey: string,
     c.senderPhone = phone;
     c.history.push({ status: c.status, note: "WhatsApp updates switched on for this complaint.", actor: "citizen", at: new Date().toISOString() });
     return structuredClone(c);
+  });
+}
+
+// --- Repair evidence --------------------------------------------------------------------------
+
+export function getRepairContext(id: string): Promise<{ status: ComplaintStatus; summary: string; before: string[]; shas: string[] } | undefined> {
+  return withStore((s) => {
+    const c = s.complaints.find((x) => x.id === id);
+    if (!c) return undefined;
+    return { status: c.status, summary: c.summary || c.title, before: [...c.mediaFiles], shas: (c.repairChecks ?? []).map((r) => r.sha256) };
+  });
+}
+
+export function addRepairCheck(id: string, check: RepairCheck): Promise<boolean> {
+  return withStore((s) => {
+    const c = s.complaints.find((x) => x.id === id);
+    if (!c) return false;
+    c.repairChecks = [...(c.repairChecks ?? []), check];
+    c.history.push({ status: c.status, note: "Repair photo added by staff.", actor: "admin", at: check.at });
+    c.internalNotes = [
+      ...(c.internalNotes ?? []),
+      { at: check.at, by: check.uploadedBy, text: "Photo check (" + (check.aiProvider ?? "no AI") + "): " + check.verdict + ". " + check.reason },
+    ];
+    return true;
   });
 }
