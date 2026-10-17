@@ -101,7 +101,7 @@ export default function Home() {
 
         <div className="container-page relative grid min-h-[36rem] items-end gap-10 pt-24 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="animate-rise self-start pb-14 lg:pb-20">
-            <h1 className="hero-h1 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
+            <h1 className="hero-h1 text-4xl font-black leading-[1.02] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-5xl lg:text-6xl">
               Spotted a civic problem?
               <span className="hero-accent mt-2 block italic text-orange-500">
                 Report it in a{" "}
