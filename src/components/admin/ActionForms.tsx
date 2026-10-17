@@ -208,56 +208,81 @@ export function EvidenceForm({ id }: { id: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  // A new key re-creates the file input after an upload, so it does not keep showing the old name.
+  const [inputKey, setInputKey] = useState(0);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
     setBusy(true);
     setError(null);
-    const body = new FormData();
-    // Phone photos are often over the 4.5 MB request limit, so shrink before sending.
-    const small = await downscaleImage(file);
-    if (small.size > MAX_UPLOAD_BYTES) {
-      setBusy(false);
-      setError(uploadErrorMessage(413));
-      return;
-    }
-    body.set("photo", small);
-    let res: Response;
+    setDone(null);
     try {
-      res = await fetch(`/api/v1/admin/complaints/${id}/evidence`, { method: "POST", body });
-    } catch {
+      // Phone photos are often over the 4.5 MB request limit, so shrink before sending.
+      const small = await downscaleImage(file);
+      if (small.size > MAX_UPLOAD_BYTES) {
+        setError(uploadErrorMessage(413));
+        return;
+      }
+      const body = new FormData();
+      body.set("photo", small);
+      const res = await fetch(`/api/v1/admin/complaints/${id}/evidence`, { method: "POST", body });
+      const data = (await res.json().catch(() => null)) as { error?: string; verdict?: string } | null;
+      if (!res.ok) {
+        setError(uploadErrorMessage(res.status, data?.error));
+        return;
+      }
+      setDone("Photo uploaded and compared with the original. The result is shown above.");
+      setFile(null);
+      setInputKey((k) => k + 1);
+      router.refresh();
+    } catch (err) {
+      console.error("[evidence upload]", err);
+      setError("Something went wrong while uploading. Please check your connection and try again.");
+    } finally {
       setBusy(false);
-      setError("Network problem. Please check your connection and try again.");
-      return;
     }
-    const data = (await res.json().catch(() => null)) as { error?: string } | null;
-    setBusy(false);
-    if (!res.ok) {
-      setError(uploadErrorMessage(res.status, data?.error));
-      return;
-    }
-    setFile(null);
-    router.refresh();
   }
+
+  const sizeText = file ? (file.size >= 1024 * 1024 ? (file.size / 1024 / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(file.size / 1024)) + " KB") : "";
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <label className="block text-sm">
-        <span className="text-zinc-600">Photo taken after the repair</span>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="mt-1 block w-full text-sm"
-        />
-      </label>
+      <p className="text-sm text-zinc-600">Photo taken after the repair</p>
+      <input
+        key={inputKey}
+        id={`evidence-${id}`}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          setError(null);
+          setDone(null);
+          setFile(e.target.files?.[0] ?? null);
+        }}
+        className="block w-full text-sm"
+      />
+      {file ? (
+        <p className="text-sm text-teal-800">
+          Selected: <strong>{file.name}</strong> ({sizeText}). Now press the button below.
+        </p>
+      ) : (
+        <p className="text-sm text-zinc-500">Choose a photo first. The button below turns on once a photo is selected.</p>
+      )}
       {error ? (
         <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
       ) : null}
-      <button disabled={!file || busy} className="rounded border border-teal-700 px-3 py-2 text-teal-800 disabled:opacity-50">
+      {done ? (
+        <p role="status" className="text-sm text-teal-800">
+          {done}
+        </p>
+      ) : null}
+      <button
+        disabled={!file || busy}
+        className="rounded border border-teal-700 bg-teal-700 px-3 py-2 font-medium text-white disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+      >
         {busy ? "Comparing with the original photo (about 10 seconds)…" : "Upload and compare"}
       </button>
     </form>
