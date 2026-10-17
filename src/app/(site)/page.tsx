@@ -237,9 +237,8 @@ function PhoneMock() {
       <div className="rounded-[2.4rem] border-[7px] border-slate-900 bg-slate-900 shadow-[10px_10px_0_0_rgb(207_61_15/0.9)]">
         <div className="overflow-hidden rounded-[1.9rem] bg-[#efeae2]">
           <div className="flex items-center gap-2.5 bg-[#075e54] px-4 py-3 text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-              <MapPin className="h-4 w-4" />
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/sudhaar-icon.png" alt="" width={32} height={32} className="h-8 w-8 rounded-full bg-white object-cover" />
             <div className="leading-tight">
               <p className="text-sm font-semibold">Sudhaar</p>
               <p className="text-[11px] text-emerald-100">online</p>

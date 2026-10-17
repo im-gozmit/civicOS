@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" alt="Sudhaar" width="420"></p>
+
 # Sudhaar
 
 **Report. Track. Resolve.** An AI-assisted civic issue reporting platform, starting with Prayagraj, Uttar Pradesh.

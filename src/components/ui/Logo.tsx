@@ -1,29 +1,13 @@
-export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
+/**
+ * The Sudhaar logo (public/sudhaar-logo.webp): the Prayagraj skyline, bridge and road over the wordmark.
+ * The wordmark is dark, so on a dark photo (`onDark`) the logo sits on a light badge to stay readable.
+ */
+export function Logo({ className = "", onDark = false, size = "md" }: { className?: string; onDark?: boolean; size?: "sm" | "md" | "lg" | "xl" }) {
+  const height = { sm: "h-10", md: "h-12", lg: "h-20", xl: "h-32" }[size];
   return (
-    <svg viewBox="0 0 40 40" className={className} role="img" aria-label="Sudhaar logo">
-      <defs>
-        <linearGradient id="sudhaar-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f15a14" />
-          <stop offset="1" stopColor="#cf3d0f" />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="11" fill="url(#sudhaar-g)" />
-      <path
-        d="M20 8.5c-4.7 0-8.5 3.7-8.5 8.3 0 5.9 6.7 12.2 7.6 13a1.3 1.3 0 0 0 1.8 0c.9-.8 7.6-7.1 7.6-13 0-4.6-3.8-8.3-8.5-8.3Z"
-        fill="#fff"
-      />
-      <path d="m16.4 17.3 2.6 2.7 4.7-5" fill="none" stroke="#cf3d0f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function Logo({ className = "", onDark = false }: { className?: string; onDark?: boolean }) {
-  return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark />
-      <span className={`font-display text-xl font-extrabold tracking-tight ${onDark ? "text-white" : "text-slate-900"}`}>
-        Sudh<span className={onDark ? "text-orange-400" : "text-teal-600"}>aar</span>
-      </span>
+    <span className={`inline-flex items-center ${onDark ? "rounded-xl bg-[var(--paper)]/90 px-2.5 py-0.5 shadow-lg backdrop-blur-sm" : ""} ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/sudhaar-logo.webp" alt="Sudhaar" width={1000} height={500} className={`${height} w-auto`} />
     </span>
   );
 }

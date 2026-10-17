@@ -6,7 +6,7 @@ export function SiteFooter() {
     <footer className="mt-16 border-t border-slate-200 bg-white pb-24 md:pb-0">
       <div className="container-page grid gap-8 py-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div className="space-y-3">
-          <Logo />
+          <Logo size="lg" />
           <p className="max-w-sm text-sm leading-relaxed text-slate-600">
             Report civic problems with a photo, get a complaint number, and follow it until it is fixed.
           </p>
