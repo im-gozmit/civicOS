@@ -10,6 +10,9 @@ export function SiteFooter() {
           <p className="max-w-sm text-sm leading-relaxed text-slate-600">
             Report civic problems with a photo, get a complaint number, and follow it until it is fixed.
           </p>
+          <p className="text-sm font-semibold text-slate-800">
+            Made in Prayagraj, during the Azad Buildathon.
+          </p>
         </div>
         <nav aria-label="Footer" className="space-y-2 text-sm">
           <p className="font-semibold text-slate-900">Citizens</p>

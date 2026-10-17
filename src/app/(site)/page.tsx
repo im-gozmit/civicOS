@@ -20,6 +20,7 @@ import {
   Waves,
 } from "lucide-react";
 import { LiveStats, LiveStatsSkeleton } from "@/components/public/LiveStats";
+import { BuildathonBanner, SangamSection } from "@/components/public/Prayagraj";
 
 export default function Home() {
   const bot = (process.env.WHATSAPP_BOT_NUMBER || "").replace(/\D/g, "");
@@ -32,7 +33,7 @@ export default function Home() {
         <div className="container-page grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="animate-rise">
             <p className="inline-flex items-center gap-2 rounded-md border-2 border-slate-900 bg-[var(--paper)] px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
-              <MapPin className="h-4 w-4 text-teal-600" /> Prayagraj &middot; demo service
+              <MapPin className="h-4 w-4 text-teal-600" /> Prayagraj <span lang="hi" className="font-[family-name:var(--font-deva)] normal-case tracking-normal">(प्रयागराज)</span> &middot; demo service
             </p>
             <h1 className="mt-6 text-5xl font-black leading-[0.98] text-slate-900 sm:text-6xl lg:text-7xl">
               Spotted a civic problem?
@@ -77,6 +78,9 @@ export default function Home() {
           <PhoneMock />
         </div>
       </section>
+
+      {/* ---------- Where it was built ---------- */}
+      <BuildathonBanner />
 
       {/* ---------- Ticker ---------- */}
       <div className="overflow-hidden border-y-2 border-slate-900 bg-slate-900 py-3 text-slate-50" aria-hidden>
@@ -156,6 +160,9 @@ export default function Home() {
           ))}
         </ul>
       </section>
+
+      {/* ---------- The city ---------- */}
+      <SangamSection />
 
       {/* ---------- Trust ---------- */}
       <section className="container-page py-10" aria-labelledby="trust-title">
