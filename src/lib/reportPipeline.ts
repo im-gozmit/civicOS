@@ -5,6 +5,7 @@ import type { Analysis } from "@/lib/complaints";
 import { runTriage } from "@/lib/ai/triage";
 import { transcribeAudio } from "@/lib/ai/transcribe";
 import { logEvent } from "@/lib/events";
+import { lookupJurisdiction } from "@/lib/jurisdiction";
 import type { Complaint } from "@/lib/types";
 
 // The ONE pipeline both channels use: AI looks at the photo + text, decides whether it is a civic
@@ -65,6 +66,9 @@ async function analyse(input: ReportInput, image: Buffer, voice: Complaint["voic
 export async function processReport(input: ReportInput): Promise<ReportResult> {
   if (input.mediaFiles.length === 0) return { ok: false, code: "UNUSABLE", seen: "No photo was provided." };
 
+  // Look up district, tehsil, ward and nearest thana from the coordinates while the AI works (it never throws).
+  const jurisdictionLookup = lookupJurisdiction(input.latitude, input.longitude);
+
   // Load the photos once; they are used for the analysis and to fingerprint each picture.
   const photos = await Promise.all(input.mediaFiles.map((f) => getFile(f)));
   const first = photos[0];
@@ -87,6 +91,7 @@ export async function processReport(input: ReportInput): Promise<ReportResult> {
 
   const outcome = await analyse(input, first, voice);
   if ("reject" in outcome) return { ok: false, code: outcome.reject, seen: outcome.seen };
+  const jurisdiction = await jurisdictionLookup;
   const complaint = await createComplaint(
     {
       source: input.source,
@@ -99,6 +104,7 @@ export async function processReport(input: ReportInput): Promise<ReportResult> {
       audioFiles: input.audioFiles,
       voice,
       mediaHashes,
+      jurisdiction,
     },
     outcome.analysis,
   );

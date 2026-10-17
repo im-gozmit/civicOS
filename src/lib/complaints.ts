@@ -5,7 +5,7 @@ import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
 import { findDuplicateCandidates, WINDOW_DAYS } from "@/lib/duplicates";
 import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
-import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Notification, RepairCheck, Severity } from "@/lib/types";
+import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Jurisdiction, Notification, RepairCheck, Severity } from "@/lib/types";
 
 // --- Triage fallback --------------------------------------------------------------------------
 // When no AI provider returns a valid result, a keyword guess from the caption is used and the
@@ -103,6 +103,7 @@ export interface NewComplaintInput {
   audioFiles: string[];
   voice?: { transcript: string; english: string; language: string; provider: string };
   mediaHashes?: string[];
+  jurisdiction?: Jurisdiction;
 }
 
 export async function createComplaint(input: NewComplaintInput, t: Analysis): Promise<Complaint> {
@@ -162,6 +163,7 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
       status: "TRIAGED",
       latitude: input.latitude,
       longitude: input.longitude,
+      jurisdiction: input.jurisdiction,
       mediaFiles: input.mediaFiles,
       audioFiles: input.audioFiles,
       voice: input.voice,

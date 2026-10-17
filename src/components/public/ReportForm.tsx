@@ -24,6 +24,8 @@ import type { LatLng } from "@/components/public/LocationPicker";
 import { normalizeWhatsappNumber } from "@/lib/phone";
 import { AgentReport, AgentTerminal } from "@/components/public/AgentTerminal";
 import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
+import { jurisdictionFacts } from "@/components/public/jurisdictionFacts";
+import type { Jurisdiction } from "@/lib/types";
 import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
 
 // Leaflet needs the browser, so the map is loaded on the client only.
@@ -152,6 +154,7 @@ interface Success {
   category: string;
   severity?: string | null;
   updatesNumber?: string | null;
+  jurisdiction?: Jurisdiction | null;
   suggestedTeam: string;
   voiceHeard?: string | null;
   similarNearby?: boolean;
@@ -384,6 +387,7 @@ export function ReportForm() {
             { label: en ? "Suggested team" : "सुझाई गई टीम", value: done.suggestedTeam, note: t.suggestedNote },
             { label: en ? "Status" : "स्थिति", value: en ? "Registered, awaiting staff review" : "दर्ज, स्टाफ समीक्षा बाकी" },
             ...(loc ? [{ label: en ? "Location" : "लोकेशन", value: <span className="font-mono">{loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}</span> }] : []),
+            ...jurisdictionFacts(done.jurisdiction, lang),
             { label: en ? "Similar reports nearby" : "आस-पास मिलती रिपोर्ट", value: done.similarNearby ? (en ? "Yes, staff will link them if it is the same" : "हाँ, एक जैसी होने पर स्टाफ जोड़ेगा") : en ? "None yet" : "अभी नहीं" },
             ...(done.updatesNumber ? [{ label: t.updatesTo, value: <span className="font-mono">{done.updatesNumber}</span>, note: t.updatesNote }] : []),
             ...(done.voiceHeard ? [{ label: t.heard, value: done.voiceHeard }] : []),

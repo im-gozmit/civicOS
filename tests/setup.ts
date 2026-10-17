@@ -17,3 +17,5 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "";
 process.env.WHATSAPP_ACCESS_TOKEN = "";
 process.env.GEMINI_API_KEY = "";
 process.env.OPENAI_API_KEY = "";
+// The map service (district, tehsil, ward, thana lookup) is only exercised, with fetch mocked, in jurisdiction.test.ts.
+process.env.JURISDICTION_LOOKUP = "off";

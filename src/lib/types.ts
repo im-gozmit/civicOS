@@ -39,6 +39,20 @@ export interface Assignment {
   correctionNote: string | null;
 }
 
+/** Where a report is, in the government's own terms, as far as the public map can tell. */
+export interface Jurisdiction {
+  status: "ok" | "partial" | "unavailable"; // unavailable = the map service could not be reached
+  district: string | null;
+  tehsil: string | null;
+  municipality: string | null; // city or town body as mapped
+  ward: string | null; // a locality name; official ward numbers are not on the public map
+  thana: string | null; // the nearest police station; official thana boundaries are not on the public map
+  thanaDistanceM: number | null;
+  pin: string | null;
+  source: "OpenStreetMap";
+  lookedUpAt: string;
+}
+
 export interface Complaint {
   id: string;
   ticketId: string; // human-readable, guessable: never an authorization secret
@@ -61,6 +75,7 @@ export interface Complaint {
   status: ComplaintStatus;
   latitude: number;
   longitude: number;
+  jurisdiction?: Jurisdiction; // looked up from the coordinates when the report is registered
   mediaFiles: string[]; // relative paths under .data/media
   audioFiles: string[];
   repairChecks?: RepairCheck[];

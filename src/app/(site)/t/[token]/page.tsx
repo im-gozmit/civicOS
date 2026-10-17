@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Info, ShieldCheck } from "lucide-react";
 import { CATEGORY_LABEL, getByToken } from "@/lib/complaints";
 import { STATUS_LABEL } from "@/lib/transitions";
 import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
+import { jurisdictionFacts } from "@/components/public/jurisdictionFacts";
 import { statusTone } from "@/components/ui/StatusBadge";
 import type { ComplaintStatus } from "@/lib/types";
 
@@ -67,6 +68,7 @@ async function Tracker({ params }: { params: Promise<{ token: string }> }) {
         { label: "Team", value: c.queue, note: pendingTeam ? "Suggested. Staff will confirm before anything is promised." : undefined },
         { label: "Status", value: STATUS_LABEL[c.status] },
         { label: "Location", value: <span className="font-mono">{c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}</span> },
+        ...jurisdictionFacts(c.jurisdiction),
         { label: "Reported", value: when(c.createdAt, true) },
         { label: "Review", value: c.needsHumanReview ? "A person will review this" : "Reviewed" },
       ]}

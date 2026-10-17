@@ -9,6 +9,7 @@ import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { DuplicateCard, EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 import { AdminImage } from "@/components/admin/AdminImage";
+import { jurisdictionFacts } from "@/components/public/jurisdictionFacts";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { SeverityBadge, StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -173,6 +174,12 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </Fact>
+              {jurisdictionFacts(c.jurisdiction).map((f) => (
+                <Fact key={f.label} label={f.label}>
+                  {f.value}
+                  {f.note ? <span className="mt-0.5 block text-xs font-normal text-slate-500">{f.note}</span> : null}
+                </Fact>
+              ))}
               <Fact label="Analysis">{c.aiProvider ? `${c.aiProvider} (${c.aiModel}), suggestion only` : "Keyword fallback, no AI used"}</Fact>
               <Fact label="Review flag">{c.needsHumanReview ? `Needs review${c.reviewReason ? `: ${c.reviewReason}` : ""}` : "None"}</Fact>
               <Fact label="Summary" wide>

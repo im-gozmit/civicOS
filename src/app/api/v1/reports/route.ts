@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
     needsHumanReview: c.needsHumanReview,
     voiceHeard: c.voice ? c.voice.english : null,
     similarNearby: (c.duplicateCandidates?.length ?? 0) > 0,
+    jurisdiction: c.jurisdiction ?? null,
     updatesNumber: phone.kind === "ok" ? maskNumber(phone.digits) : null,
     whatsappLink: bot ? `https://wa.me/${bot}?text=${encodeURIComponent(`TRACK ${c.ticketId} ${c.trackingToken}`)}` : null,
   });

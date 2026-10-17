@@ -26,6 +26,7 @@ The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 | "Get updates on WhatsApp" for website reports (`TRACK <ticket> <token>`) | Working |
 | **Duplicate detection**: new reports are compared with open ones nearby (same type, close, recent, identical photo); staff link or dismiss, nothing is merged automatically | Working |
 | **Public issue heatmap** on the home page (`/#map`) with approximate positions and no private details | Working |
+| **Where it is**: district, tehsil, municipal body, locality and nearest police station, looked up from the coordinates (OpenStreetMap). Anything the public map does not have is shown as not available, because the government keeps ward and thana maps with itself | Working |
 | Automated tests (48) | Passing |
 | **Real database** (Postgres) and private file storage (Supabase), phone numbers encrypted at rest, rate limits and duplicate-message protection kept in the database | Working, tested locally and as a production build |
 | Daily AI brief, templates for updates after 24 h, per-person admin accounts | Not built yet |
