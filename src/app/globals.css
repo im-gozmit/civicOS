@@ -40,11 +40,11 @@
   --color-teal-800: #882913;
   --color-teal-900: #6e2613;
   --color-teal-950: #3c1007;
-  --breakpoint-sm: 57.6rem;
-  --breakpoint-md: 69.12rem;
-  --breakpoint-lg: 92.16rem;
-  --breakpoint-xl: 115.2rem;
-  --breakpoint-2xl: 138.24rem;
+  --breakpoint-sm: 46.08rem;
+  --breakpoint-md: 55.296rem;
+  --breakpoint-lg: 73.728rem;
+  --breakpoint-xl: 92.16rem;
+  --breakpoint-2xl: 110.592rem;
 }
 
 @theme inline {
@@ -61,17 +61,17 @@
 }
 
 /*
-  Desktop zoom: on screens at least 768px wide the whole page is drawn at 144%, like a 144% browser
+  Desktop zoom: on screens at least 768px wide the whole page is drawn at 115%, like a 115% browser
   zoom (the look the owner prefers), so people do not have to zoom in by hand. The responsive breakpoints in
-  @theme below are scaled by the same 1.44 to match: the layout then behaves as if the window were half as wide,
+  @theme below are scaled by the same 1.152 to match: the layout then behaves as if the window were half as wide,
   exactly as with a real browser zoom. Phones and narrow windows are not scaled.
 */
 @media (min-width: 768px) {
   html {
-    zoom: 1.44;
+    zoom: 1.152;
   }
   :root {
-    --vh: 0.694vh;
+    --vh: 0.868vh;
   }
 }
 
@@ -349,7 +349,7 @@ html[data-view="classic"] .hero-card .wa-step {
   The WhatsApp phone in the hero. Below the desktop layout it stands alone, so it is enlarged to fill the space
   (smaller windows get a smaller boost so it never spills out). In the desktop layout it is tucked beside the statue.
 */
-@media (max-width: 1105px) {
+@media (max-width: 884px) {
   .phone-zoom {
     zoom: 1.7;
   }
