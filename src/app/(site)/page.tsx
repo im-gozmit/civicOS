@@ -104,8 +104,8 @@ export default function Home() {
           <BuildathonBanner />
         </div>
 
-        <div className="container-page relative grid min-h-[34rem] items-end gap-10 pt-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="animate-rise self-start pb-14 lg:pb-20">
+        <div className="container-page relative grid min-h-[34rem] items-end gap-10 pt-1 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="animate-rise self-start pb-14 pt-4 lg:pb-4">
             <h1 className="hero-h1 text-4xl font-black leading-[1.02] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-5xl lg:text-6xl">
               Spotted a civic problem?
               <span className="hero-accent mt-2 block italic text-orange-500">
@@ -144,7 +144,7 @@ export default function Home() {
             </ul>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[28rem] self-end pb-0 lg:mx-0 lg:justify-self-end">
+          <div className="relative mx-auto w-full max-w-[28rem] self-end pb-0 lg:mx-0 lg:mb-8 lg:justify-self-end">
             <AzadStatue />
             {/* Stacked layout: the phone sits under the statue. */}
             <div className="mt-10 md:hidden">

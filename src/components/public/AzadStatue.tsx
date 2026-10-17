@@ -16,7 +16,7 @@ export function AzadStatue() {
   const photo = !glb && has("azad-statue-cutout.webp");
 
   return (
-    <figure className="relative mx-auto w-full max-w-[11rem] md:mx-0 md:max-w-[13.5rem]">
+    <figure className="relative mx-auto w-full max-w-[11rem] md:mx-0 md:max-w-[12.5rem]">
       <div>
         {glb ? (
           <StatueViewer src="/azad.glb" />
