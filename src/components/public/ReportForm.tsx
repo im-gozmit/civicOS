@@ -17,7 +17,9 @@ const T = {
     title: "Report a problem",
     intro: "Take a photo, mark the place on the map, and send. We will give you a complaint number.",
     photo: "1. Photo of the problem",
-    takePhoto: "Take or choose a photo",
+    camera: "Take a photo",
+    gallery: "Choose from gallery",
+    photoChosen: "Photo selected.",
     describe: "2. What is the problem? (optional)",
     describePh: "For example: big pothole near the school gate",
     voice: "Or record a voice note (optional)",
@@ -49,7 +51,9 @@ const T = {
     title: "समस्या दर्ज करें",
     intro: "फ़ोटो लें, नक्शे पर जगह चुनें और भेजें। हम आपको शिकायत नंबर देंगे।",
     photo: "1. समस्या की फ़ोटो",
-    takePhoto: "फ़ोटो लें या चुनें",
+    camera: "फ़ोटो खींचें",
+    gallery: "गैलरी से चुनें",
+    photoChosen: "फ़ोटो चुनी गई।",
     describe: "2. समस्या क्या है? (वैकल्पिक)",
     describePh: "जैसे: स्कूल के गेट के पास बड़ा गड्ढा",
     voice: "या वॉइस नोट रिकॉर्ड करें (वैकल्पिक)",
@@ -256,16 +260,29 @@ export function ReportForm() {
 
       <section className="space-y-2">
         <h2 className="font-medium">{t.photo}</h2>
-        <label className="block cursor-pointer rounded border-2 border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-600">
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="sr-only"
-            onChange={(e) => choosePhoto(e.target.files?.[0] ?? null)}
-          />
-          {t.takePhoto}
-        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {/* "capture" opens the camera directly; without it the phone offers the gallery/files. */}
+          <label className="block cursor-pointer rounded border-2 border-dashed border-teal-600 p-4 text-center text-sm font-medium text-teal-800">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => choosePhoto(e.target.files?.[0] ?? null)}
+            />
+            📷 {t.camera}
+          </label>
+          <label className="block cursor-pointer rounded border-2 border-dashed border-zinc-300 p-4 text-center text-sm font-medium text-zinc-700">
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => choosePhoto(e.target.files?.[0] ?? null)}
+            />
+            🖼️ {t.gallery}
+          </label>
+        </div>
+        {photo ? <p className="text-xs text-zinc-600">{t.photoChosen}</p> : null}
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="" className="max-h-60 w-full rounded object-contain" />

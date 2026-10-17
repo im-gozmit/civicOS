@@ -109,7 +109,12 @@ function saveConversation(conv: Conversation) {
 }
 
 async function register(conv: Conversation, pending: PendingReport, latitude: number, longitude: number) {
-  await reply(conv.phone, "🔎 Analysing your photo, this takes about 15 seconds…");
+  await reply(
+    conv.phone,
+    pending.audioFiles.length > 0
+      ? "🔎 Analysing your photo and voice note. This can take up to a minute…"
+      : "🔎 Analysing your photo, this takes about 15 seconds…",
+  );
   const result = await processReport({
     source: "whatsapp",
     senderKey: conv.senderKey,

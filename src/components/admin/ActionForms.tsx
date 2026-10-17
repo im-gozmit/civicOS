@@ -18,7 +18,10 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
   const [busy, setBusy] = useState(false);
 
   if (options.length === 0) return <p className="text-sm text-zinc-500">No further status changes are allowed from here.</p>;
-  const needsReason = options.find((o) => o.value === status)?.needsReason ?? false;
+  // The list of allowed moves changes after every update. If the remembered choice is no longer
+  // offered, fall back to the first option, so what the dropdown shows is what gets sent.
+  const effective = options.some((o) => o.value === status) ? status : options[0].value;
+  const needsReason = options.find((o) => o.value === effective)?.needsReason ?? false;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +30,7 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
     const res = await fetch(`/api/v1/admin/complaints/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, publicNote, internalNote }),
+      body: JSON.stringify({ status: effective, publicNote, internalNote }),
     });
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     setBusy(false);
@@ -44,7 +47,7 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
     <form onSubmit={submit} className="space-y-3">
       <label className="block text-sm">
         <span className="text-zinc-600">Move to</span>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded border border-zinc-300 px-3 py-2">
+        <select value={effective} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded border border-zinc-300 px-3 py-2">
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
