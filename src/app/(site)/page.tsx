@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -19,8 +18,8 @@ import {
   UserCheck,
   Waves,
 } from "lucide-react";
-import { LiveStats, LiveStatsSkeleton } from "@/components/public/LiveStats";
-import { BuildathonBanner, SangamSection } from "@/components/public/Prayagraj";
+import { IssueMap } from "@/components/public/IssueMap";
+import { BuildathonBanner } from "@/components/public/Prayagraj";
 import { AzadStatue } from "@/components/public/AzadStatue";
 
 export default function Home() {
@@ -77,9 +76,9 @@ export default function Home() {
                   <MessageCircle className="h-5 w-5" /> Report on WhatsApp
                 </a>
               ) : (
-                <Link href="/map" className="btn btn-secondary px-6 py-3.5 text-base">
+                <a href="#map" className="btn btn-secondary px-6 py-3.5 text-base">
                   See problems nearby
-                </Link>
+                </a>
               )}
             </div>
 
@@ -117,20 +116,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ---------- Live numbers ---------- */}
-      <section className="container-page -mt-2 py-10" aria-labelledby="stats-title">
-        <div className="mb-4 flex items-end justify-between gap-4">
+      {/* ---------- Live heatmap of reported problems (the only place the map appears) ---------- */}
+      <section id="map" className="container-page scroll-mt-24 py-10" aria-labelledby="map-title">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Live from the community</p>
-            <h2 id="stats-title" className="mt-1 text-2xl font-bold text-slate-900">What has been reported so far</h2>
+            <h2 id="map-title" className="mt-1 text-3xl font-black text-slate-900">Where Prayagraj is reporting problems</h2>
+            <p className="mt-2 max-w-xl text-slate-600">Brighter patches mean more reports close together. Switch to pins to see each report and whether it is being handled.</p>
           </div>
-          <Link href="/map" className="hidden items-center gap-1 text-sm font-semibold text-teal-700 hover:text-teal-800 sm:inline-flex">
-            Open the map <ArrowRight className="h-4 w-4" />
+          <Link href="/report" className="btn btn-primary">
+            <Camera className="h-4 w-4" /> Report a problem
           </Link>
         </div>
-        <Suspense fallback={<LiveStatsSkeleton />}>
-          <LiveStats />
-        </Suspense>
+        <IssueMap />
       </section>
 
       {/* ---------- How it works ---------- */}
@@ -180,9 +178,6 @@ export default function Home() {
           ))}
         </ul>
       </section>
-
-      {/* ---------- The city ---------- */}
-      <SangamSection />
 
       {/* ---------- Trust ---------- */}
       <section className="container-page py-10" aria-labelledby="trust-title">

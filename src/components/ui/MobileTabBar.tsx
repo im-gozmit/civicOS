@@ -6,7 +6,7 @@ import { Camera, House, Map, Search } from "lucide-react";
 
 const TABS = [
   { href: "/", label: "Home", Icon: House, primary: false },
-  { href: "/map", label: "Map", Icon: Map, primary: false },
+  { href: "/#map", label: "Map", Icon: Map, primary: false },
   { href: "/report", label: "Report", Icon: Camera, primary: true },
   { href: "/track", label: "Track", Icon: Search, primary: false },
 ];

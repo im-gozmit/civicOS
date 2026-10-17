@@ -25,7 +25,7 @@ The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 | Tracking link `/t/<token>` and minimal public lookup `/track` | Working |
 | "Get updates on WhatsApp" for website reports (`TRACK <ticket> <token>`) | Working |
 | **Duplicate detection**: new reports are compared with open ones nearby (same type, close, recent, identical photo); staff link or dismiss, nothing is merged automatically | Working |
-| **Public issue map** `/map` with approximate positions and no private details | Working |
+| **Public issue heatmap** on the home page (`/#map`) with approximate positions and no private details | Working |
 | Automated tests (48) | Passing |
 | **Real database** (Postgres) and private file storage (Supabase), phone numbers encrypted at rest, rate limits and duplicate-message protection kept in the database | Working, tested locally and as a production build |
 | Daily AI brief, templates for updates after 24 h, per-person admin accounts | Not built yet |
@@ -54,7 +54,7 @@ cp .env.example .env.local   # then fill in the values (see below)
 npm run dev
 ```
 
-The app runs at http://localhost:3000. Pages: `/` home, `/report`, `/track`, `/map`, `/admin`.
+The app runs at http://localhost:3000. Pages: `/` home (with the live heatmap), `/report`, `/track`, `/admin`.
 
 ### Environment variables
 

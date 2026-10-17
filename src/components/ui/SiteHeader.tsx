@@ -10,7 +10,7 @@ import { ViewSwitch } from "@/components/ui/ViewSwitch";
 const LINKS = [
   { href: "/report", label: "Report" },
   { href: "/track", label: "Track" },
-  { href: "/map", label: "Map" },
+  { href: "/#map", label: "Map" },
 ];
 
 export function SiteHeader({ whatsappHref }: { whatsappHref: string | null }) {

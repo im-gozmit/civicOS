@@ -28,7 +28,7 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link className="hover:text-teal-700" href="/map">
+              <Link className="hover:text-teal-700" href="/#map">
                 Problems nearby
               </Link>
             </li>

@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
   // Loaded at runtime instead of being bundled (the local development database ships WebAssembly).
   serverExternalPackages: ["@electric-sql/pglite", "postgres"],
+  // The map used to be its own page; it now lives on the home page.
+  async redirects() {
+    return [{ source: "/map", destination: "/#map", permanent: true }];
+  },
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,

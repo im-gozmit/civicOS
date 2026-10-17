@@ -312,3 +312,9 @@ html[data-view="classic"] .site-header .header-wa {
   backdrop-filter: none;
 }
 
+
+/* Heatmap discs on the home page map: blurred so overlapping reports melt into one glow. */
+.heat-dot {
+  filter: blur(7px);
+  mix-blend-mode: multiply;
+}

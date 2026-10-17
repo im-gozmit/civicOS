@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { LayerGroup, Map as LeafletMap } from "leaflet";
-import { AlertCircle, CheckCircle2, Clock, Info, Wrench } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Flame, Info, MapPin, Wrench } from "lucide-react";
 
 interface Marker {
   key: string;
@@ -37,6 +37,8 @@ export function IssueMap() {
   const [category, setCategory] = useState("all");
   const [group, setGroup] = useState<"all" | Group>("all");
   const [ready, setReady] = useState(false);
+  // "heat" shows where reports cluster; "pins" shows each report with its status.
+  const [mode, setMode] = useState<"heat" | "pins">("heat");
 
   useEffect(() => {
     fetch("/api/v1/map/incidents")
@@ -76,6 +78,13 @@ export function IssueMap() {
     if (!ready || !L || !layer.current || !map.current) return;
     layer.current.clearLayers();
     for (const m of shown) {
+      if (mode === "heat") {
+        // Three soft, overlapping discs per report: where reports cluster, the glow stacks up from red to yellow.
+        for (const [radius, color, opacity] of [[40, "#e8501c", 0.14], [24, "#ff8a1c", 0.2], [11, "#ffd23f", 0.3]] as const) {
+          L.circleMarker([m.lat, m.lng], { radius, stroke: false, fillColor: color, fillOpacity: opacity, interactive: false, className: "heat-dot" }).addTo(layer.current);
+        }
+        continue;
+      }
       L.circleMarker([m.lat, m.lng], { radius: 10, color: "#ffffff", weight: 2.5, fillColor: COLORS[m.group], fillOpacity: 0.95 })
         .bindPopup(
           `<strong style="font-size:15px">${esc(m.category)}</strong><br/><span style="color:${COLORS[m.group]};font-weight:600">${esc(m.status)}</span><br/><small style="color:#64748b">Reported ${esc(m.reportedOn)}</small>`,
@@ -85,7 +94,7 @@ export function IssueMap() {
     if (shown.length > 0) {
       map.current.fitBounds(L.latLngBounds(shown.map((m) => [m.lat, m.lng] as [number, number])).pad(0.3), { maxZoom: 15 });
     }
-  }, [shown, ready]);
+  }, [shown, ready, mode]);
 
   const counts: Record<Group, number> = {
     new: (markers ?? []).filter((m) => m.group === "new").length,
@@ -133,6 +142,29 @@ export function IssueMap() {
           </button>
         ))}
         <span className="ml-auto text-sm text-slate-500">{markers ? `${shown.length} shown` : "Loading…"}</span>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="group" aria-label="Map style" className="inline-grid grid-cols-2 rounded-full border-2 border-slate-900 bg-[var(--paper)] p-0.5 shadow-[2px_2px_0_0_var(--ink)]">
+          {([["heat", "Heatmap", Flame], ["pins", "Pins", MapPin]] as const).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setMode(id)}
+              aria-pressed={mode === id}
+              className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-bold uppercase tracking-wider transition-colors ${mode === id ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </button>
+          ))}
+        </div>
+        {mode === "heat" ? (
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-600" aria-hidden>
+            Fewer reports
+            <span className="h-2.5 w-28 rounded-full bg-gradient-to-r from-orange-200 via-orange-500 to-yellow-300 ring-1 ring-slate-900/20" />
+            More reports
+          </div>
+        ) : null}
       </div>
 
       <div className="card relative overflow-hidden p-1.5">
