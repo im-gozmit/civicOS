@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
+    "@google/model-viewer": "^3.5.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.59.0",
     "next": "16.4.2",

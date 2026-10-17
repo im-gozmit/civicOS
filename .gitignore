@@ -46,3 +46,5 @@ next-env.d.ts
 
 # keep the placeholder template
 !.env.example
+# licensed stock photo, not for the repository
+src/azadim.jpg

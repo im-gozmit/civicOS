@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { LiveStats, LiveStatsSkeleton } from "@/components/public/LiveStats";
 import { BuildathonBanner, SangamSection } from "@/components/public/Prayagraj";
+import { AzadStatue } from "@/components/public/AzadStatue";
 
 export default function Home() {
   const bot = (process.env.WHATSAPP_BOT_NUMBER || "").replace(/\D/g, "");
@@ -75,7 +76,10 @@ export default function Home() {
             </ul>
           </div>
 
-          <PhoneMock />
+          <div className="grid items-end gap-6 sm:grid-cols-[1fr_0.8fr]">
+            <AzadStatue />
+            <PhoneMock />
+          </div>
         </div>
       </section>
 
@@ -210,7 +214,7 @@ export default function Home() {
 /** A pure-CSS phone showing the WhatsApp conversation, so visitors see what to expect. */
 function PhoneMock() {
   return (
-    <div className="relative mx-auto w-full max-w-[320px] rotate-2 animate-rise [animation-delay:120ms]" aria-hidden>
+    <div className="relative mx-auto w-full max-w-[260px] rotate-2 animate-rise [animation-delay:120ms]" aria-hidden>
       <span className="absolute -left-6 top-10 z-10 -rotate-6 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
         Ticket in seconds
       </span>
@@ -228,14 +232,10 @@ function PhoneMock() {
 
           <div className="space-y-2 p-3 text-[13px] leading-snug">
             <div className="ml-auto w-[78%] rounded-xl rounded-tr-sm bg-[#d9fdd3] p-1.5 shadow-sm">
-              <div className="flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-slate-500 to-slate-700 text-white/80">
+              <div className="flex h-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-500 to-slate-700 text-white/80">
                 <Construction className="h-9 w-9" />
               </div>
               <p className="px-1.5 pb-0.5 pt-1.5 text-slate-800">Big pothole near the school gate</p>
-            </div>
-            <div className="ml-auto flex w-[62%] items-center gap-2 rounded-xl rounded-tr-sm bg-[#d9fdd3] p-2.5 shadow-sm">
-              <MapPin className="h-4 w-4 text-rose-500" />
-              <span className="text-slate-800">Location shared</span>
             </div>
             <div className="w-[88%] rounded-xl rounded-tl-sm bg-white p-3 shadow-sm">
               <p className="font-semibold text-slate-900">✅ Complaint registered</p>
@@ -244,10 +244,6 @@ function PhoneMock() {
               <p className="text-slate-600">Suggested: Roads &amp; Public Works</p>
               <p className="mt-1.5 text-[12px] text-slate-500">Staff will confirm the team and message you.</p>
               <p className="mt-1.5 text-[12px] font-medium text-sky-700 underline">Track it here</p>
-            </div>
-            <div className="w-[80%] rounded-xl rounded-tl-sm bg-white p-3 shadow-sm">
-              <p className="font-semibold text-slate-900">📣 Update on CIV-004217</p>
-              <p className="mt-0.5 text-slate-600">Reviewed by staff and assigned to Roads &amp; Public Works.</p>
             </div>
           </div>
         </div>
