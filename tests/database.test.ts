@@ -2,13 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The WhatsApp conversation is tested with the outside world replaced by fakes: no real messages
 // are sent, no files are downloaded and no AI is called. The database is real (a temporary one).
-const sent: Array<{ kind: "text" | "location"; to: string; text: string }> = [];
+const sent: Array<{ kind: "text" | "location" | "buttons"; to: string; text: string; buttons?: Array<{ id: string; title: string }> }> = [];
+let buttonsFail = false;
 const reports: Array<{ mediaFiles: string[]; audioFiles: string[]; caption: string; latitude: number; longitude: number }> = [];
 let reportResult: "ok" | "not_civic" = "ok";
 
 vi.mock("@/lib/whatsapp/cloud", () => ({
   sendText: async (to: string, text: string) => {
     sent.push({ kind: "text", to, text });
+    return { ok: true, status: 200, response: {} };
+  },
+  sendButtons: async (to: string, o: { body: string; buttons: Array<{ id: string; title: string }> }) => {
+    if (buttonsFail) return { ok: false, status: 400, response: {} };
+    sent.push({ kind: "buttons", to, text: o.body, buttons: o.buttons });
     return { ok: true, status: 200, response: {} };
   },
   sendLocationRequest: async (to: string, text: string) => {
@@ -65,6 +71,7 @@ beforeEach(() => {
   sent.length = 0;
   reports.length = 0;
   reportResult = "ok";
+  buttonsFail = false;
 });
 
 describe("WhatsApp conversation", () => {
@@ -151,9 +158,66 @@ describe("WhatsApp conversation", () => {
     const { withRepo } = await import("@/lib/repo");
     const who = person();
     await handleInbound(msg(who, { type: "text", text: "hello" }));
-    expect(textsTo(who.from).at(-1)?.text).toContain("Welcome to Sudhaar");
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("buttons");
+    expect(last?.text).toContain("Welcome to *Sudhaar*");
     const conv = await withRepo((r) => r.getConversation(who.senderKey));
     expect(Date.now() - Date.parse(conv?.lastInboundAt ?? "")).toBeLessThan(5000);
+  });
+
+  it("the welcome greets by first name and offers a button for each action", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "text", text: "hi", profileName: "Riya Sharma" }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("buttons");
+    expect(last?.text).toContain("Namaste, Riya!");
+    expect(last?.text).not.toContain("Sharma");
+    expect(last?.buttons?.map((b) => b.id)).toEqual(["REPORT", "MY_COMPLAINTS", "HOW_IT_WORKS"]);
+  });
+
+  it("falls back to plain text, with the same words, if WhatsApp refuses the buttons", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    buttonsFail = true;
+    await handleInbound(msg(who, { type: "text", text: "hello" }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("text");
+    expect(last?.text).toContain("Welcome to *Sudhaar*");
+    expect(last?.text).toContain("my complaints");
+  });
+
+  it("tapping 'Report a problem' tells the citizen to send a photo", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "interactive", buttonReply: { id: "REPORT", title: "Report a problem" } }));
+    expect(textsTo(who.from).at(-1)?.text).toContain("send a *photo*");
+  });
+
+  it("tapping 'How it works' explains the steps and offers to start a report", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "interactive", buttonReply: { id: "HOW_IT_WORKS" } }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("buttons");
+    expect(last?.text).toContain("complaint number");
+    expect(last?.buttons?.map((b) => b.id)).toEqual(["REPORT"]);
+  });
+
+  it("tapping 'My complaints' with none yet is kind and offers to report", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "interactive", buttonReply: { id: "MY_COMPLAINTS" } }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.text).toContain("not reported anything yet");
+    expect(last?.buttons?.map((b) => b.id)).toEqual(["REPORT"]);
+  });
+
+  it("an unknown button shows the welcome menu again", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "interactive", buttonReply: { id: "SOMETHING_ELSE" } }));
+    expect(textsTo(who.from).at(-1)?.buttons).toHaveLength(3);
   });
 });
 

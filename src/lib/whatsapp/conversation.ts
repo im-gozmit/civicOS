@@ -1,7 +1,20 @@
 import { withRepo } from "@/lib/repo";
 import { CATEGORY_LABEL, bindToSender, getOwnByTicket, listForSender } from "@/lib/complaints";
 import { processReport } from "@/lib/reportPipeline";
-import { sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
+import { sendButtons, sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
+import {
+  BTN_REPORT,
+  HOW_IT_WORKS,
+  NO_COMPLAINTS,
+  REPORT_PROMPT,
+  WELCOME_BUTTONS,
+  WELCOME_FOOTER,
+  WELCOME_HEADER,
+  cleanProfileName,
+  welcomeBody,
+  welcomeText,
+} from "@/lib/whatsapp/menu";
+import type { MenuButton } from "@/lib/whatsapp/menu";
 import { downloadMedia } from "@/lib/whatsapp/media";
 import { logEvent } from "@/lib/events";
 import type { Complaint, Conversation, PendingReport } from "@/lib/types";
@@ -15,18 +28,14 @@ export interface InboundMessage {
   image?: { id: string; caption?: string };
   audio?: { id: string };
   location?: { latitude: number; longitude: number };
+  buttonReply?: { id: string; title?: string }; // the citizen tapped one of our reply buttons
+  profileName?: string; // their WhatsApp profile name, used only to greet them
 }
 
 const LOCATION_FRESH_MS = 10 * 60 * 1000; // a location sent just before the photo still counts
 const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 
 // --- Replies -----------------------------------------------------------------------------------
-
-const HELP =
-  "👋 Welcome to Sudhaar.\n" +
-  "To report a problem: send a *photo* (add a short caption if you like) and then share the *location* (📎 > Location).\n" +
-  "To check a complaint: send *status CIV-000123* or *my complaints*.\n\n" +
-  "समस्या दर्ज करने के लिए फ़ोटो भेजें और फिर लोकेशन शेयर करें।";
 
 function baseUrl() {
   return (process.env.PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -61,6 +70,25 @@ function successMessage(c: Complaint) {
 async function reply(to: string, text: string) {
   const r = await sendText(to, text);
   logEvent({ sent: { ok: r.ok, status: r.status, error: r.ok ? undefined : r.response } });
+}
+
+/** A message with tap buttons. If WhatsApp refuses the buttons, the same words go out as plain text. */
+async function replyWithButtons(to: string, body: string, buttons: MenuButton[], plainText: string, opts: { header?: string; footer?: string } = {}) {
+  const r = await sendButtons(to, { body, buttons, header: opts.header, footer: opts.footer });
+  logEvent({ sent: { ok: r.ok, status: r.status, kind: "buttons", error: r.ok ? undefined : r.response } });
+  if (!r.ok) await reply(to, plainText);
+}
+
+/** The welcome menu: a warm greeting and a button for each thing the citizen can do. */
+async function sendWelcome(to: string, profileName?: string) {
+  const name = cleanProfileName(profileName);
+  await replyWithButtons(to, welcomeBody(name), WELCOME_BUTTONS, welcomeText(name), { header: WELCOME_HEADER, footer: WELCOME_FOOTER });
+}
+
+async function sendComplaintList(to: string, senderKey: string) {
+  const list = await listForSender(senderKey);
+  if (list.length) await reply(to, "Your recent complaints:\n" + list.map((c) => `• ${c.ticketId} — ${c.status} — ${c.title}`).join("\n"));
+  else await replyWithButtons(to, NO_COMPLAINTS, [BTN_REPORT], NO_COMPLAINTS + "\nSend a photo to start.");
 }
 
 async function askForLocation(to: string) {
@@ -265,13 +293,7 @@ async function processMessage(msg: InboundMessage) {
       }
       if (/^(my complaints|complaints|my status|status)$/i.test(text)) {
         await mutate(msg, () => undefined);
-        const list = await listForSender(msg.senderKey);
-        await reply(
-          to,
-          list.length
-            ? "Your recent complaints:\n" + list.map((c) => `• ${c.ticketId} — ${c.status} — ${c.title}`).join("\n")
-            : "You have no complaints yet. Send a photo of a problem to start.",
-        );
+        await sendComplaintList(to, msg.senderKey);
         return;
       }
 
@@ -283,8 +305,28 @@ async function processMessage(msg: InboundMessage) {
         }
         return false;
       });
-      await reply(to, appended ? "Noted. Please share the location (📎 > Location) to finish your report." : HELP);
+      if (appended) await reply(to, "Noted. Please share the location (📎 > Location) to finish your report.");
+      else await sendWelcome(to, msg.profileName);
       return;
+    }
+
+    // The citizen tapped one of the buttons from the welcome menu.
+    case "interactive": {
+      await mutate(msg, () => undefined); // they just wrote, which opens the 24h window
+      switch (msg.buttonReply?.id) {
+        case "REPORT":
+          await reply(to, REPORT_PROMPT);
+          return;
+        case "MY_COMPLAINTS":
+          await sendComplaintList(to, msg.senderKey);
+          return;
+        case "HOW_IT_WORKS":
+          await replyWithButtons(to, HOW_IT_WORKS, [BTN_REPORT], HOW_IT_WORKS);
+          return;
+        default:
+          await sendWelcome(to, msg.profileName);
+          return;
+      }
     }
 
     default:

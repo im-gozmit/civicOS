@@ -27,6 +27,7 @@ interface WaMessage {
   image?: { id: string; caption?: string; mime_type?: string };
   audio?: { id: string; voice?: boolean; mime_type?: string };
   location?: { latitude: number; longitude: number; name?: string; address?: string };
+  interactive?: { type?: string; button_reply?: { id: string; title?: string } };
 }
 
 export async function POST(req: NextRequest) {
@@ -78,7 +79,7 @@ async function handlePayload(payload: unknown) {
         }
       }
 
-      const contacts = (value.contacts as Array<{ user_id?: string }> | undefined) ?? [];
+      const contacts = (value.contacts as Array<{ user_id?: string; profile?: { name?: string } }> | undefined) ?? [];
       const messages = (value.messages as WaMessage[] | undefined) ?? [];
       for (const msg of messages) {
         if (!(await claimMessage(msg.id))) continue; // Meta redelivers; act on each message id once
@@ -92,6 +93,8 @@ async function handlePayload(payload: unknown) {
           text: msg.text?.body,
           image: msg.image ? { id: msg.image.id, caption: msg.image.caption } : undefined,
           audio: msg.audio ? { id: msg.audio.id } : undefined,
+          buttonReply: msg.interactive?.button_reply ? { id: msg.interactive.button_reply.id, title: msg.interactive.button_reply.title } : undefined,
+          profileName: contacts[0]?.profile?.name,
           location: msg.location
             ? { latitude: msg.location.latitude, longitude: msg.location.longitude }
             : undefined,

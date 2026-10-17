@@ -49,3 +49,28 @@ export async function sendText(to: string, body: string): Promise<{ ok: boolean;
   const response = await res.json().catch(() => null);
   return { ok: res.ok, status: res.status, response };
 }
+
+/**
+ * A message with up to three tap-to-reply buttons. Needs an open 24-hour window (it is always sent as a reply to
+ * something the citizen just wrote). Titles are 20 characters at most, the body 1024.
+ */
+export async function sendButtons(
+  to: string,
+  opts: { body: string; buttons: Array<{ id: string; title: string }>; header?: string; footer?: string },
+): Promise<{ ok: boolean; status: number; response: unknown }> {
+  const { token, phoneNumberId } = config();
+  const interactive: Record<string, unknown> = {
+    type: "button",
+    body: { text: opts.body.slice(0, 1024) },
+    action: { buttons: opts.buttons.slice(0, 3).map((b) => ({ type: "reply", reply: { id: b.id, title: b.title.slice(0, 20) } })) },
+  };
+  if (opts.header) interactive.header = { type: "text", text: opts.header.slice(0, 60) };
+  if (opts.footer) interactive.footer = { text: opts.footer.slice(0, 60) };
+  const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to, type: "interactive", interactive }),
+  });
+  const response = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, response };
+}
