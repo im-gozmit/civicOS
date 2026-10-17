@@ -49,7 +49,7 @@ export function TiltStatue({ src }: { src: string }) {
         alt="Statue of Chandra Shekhar Azad in Azad Park, Prayagraj"
         width={424}
         height={1200}
-        className="block h-auto w-full drop-shadow-[6px_8px_0_rgb(26_23_19/0.18)] transition-transform duration-300 ease-out will-change-transform"
+        className="block h-auto w-full drop-shadow-[0_0_26px_rgb(255_140_50/0.35)] transition-transform duration-300 ease-out will-change-transform"
       />
     </div>
   );

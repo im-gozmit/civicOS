@@ -17,12 +17,12 @@ export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
   );
 }
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "", onDark = false }: { className?: string; onDark?: boolean }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <LogoMark />
-      <span className="font-display text-xl font-extrabold tracking-tight text-slate-900">
-        Civic<span className="text-teal-600">OS</span>
+      <span className={`font-display text-xl font-extrabold tracking-tight ${onDark ? "text-white" : "text-slate-900"}`}>
+        Civic<span className={onDark ? "text-orange-400" : "text-teal-600"}>OS</span>
       </span>
     </span>
   );
