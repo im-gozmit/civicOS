@@ -1,11 +1,12 @@
 import { withRepo } from "@/lib/repo";
-import { CATEGORY_LABEL, bindToSender, getOwnByTicket, listForSender } from "@/lib/complaints";
+import { bindToSender, getOwnByTicket, listForSender } from "@/lib/complaints";
+import { TRACK_BUTTON_LABEL } from "@/lib/notificationText";
 import { processReport } from "@/lib/reportPipeline";
-import { sendButtons, sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
+import { sendButtons, sendLinkButton, sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
+import { R, successText } from "@/lib/whatsapp/replies";
 import {
   BTN_REPORT,
   HOW_IT_WORKS,
-  NO_COMPLAINTS,
   REPORT_PROMPT,
   WELCOME_BUTTONS,
   WELCOME_FOOTER,
@@ -45,31 +46,16 @@ function trackUrl(c: Complaint) {
   return `${baseUrl()}/t/${c.trackingToken}`;
 }
 
-function successMessage(c: Complaint) {
-  return (
-    `✅ Complaint registered: *${c.ticketId}*\n` +
-    `Issue: ${CATEGORY_LABEL[c.category]}\n` +
-    `Suggested team: ${c.queue}\n` +
-    `(Staff will confirm the team, and we will message you when they do.)\n` +
-    `Severity (suggested): ${c.severity.charAt(0) + c.severity.slice(1).toLowerCase()}\n` +
-    `Summary: ${c.summary}\n` +
-    (c.voice ? `Voice note (as we understood it): ${c.voice.english}\n` : "") +
-    ((c.duplicateCandidates?.length ?? 0) > 0
-      ? `ℹ️ A similar problem was already reported nearby. Your report is registered separately and staff will link them if it is the same.\n`
-      : "") +
-    `Status: received, awaiting staff review\n` +
-    (c.needsHumanReview
-      ? `Note: ${c.aiProvider ? "the automatic analysis is only a suggestion and" : "automatic analysis was unavailable, so"} a person will review this report.\n`
-      : "") +
-    `\nTrack it here: ${trackUrl(c)}\n` +
-    `Reply *status ${c.ticketId}* anytime.\n\n` +
-    `आपकी शिकायत ${c.ticketId} दर्ज हो गई है। ऊपर दिए लिंक से स्थिति देखें।`
-  );
-}
-
 async function reply(to: string, text: string) {
   const r = await sendText(to, text);
   logEvent({ sent: { ok: r.ok, status: r.status, error: r.ok ? undefined : r.response } });
+}
+
+/** A message whose tracking link is a tap button, not text in the chat. If WhatsApp refuses the button, the link is added as text so it is never lost. */
+async function replyWithLink(to: string, text: string, url: string) {
+  const r = await sendLinkButton(to, { body: text, label: TRACK_BUTTON_LABEL, url });
+  logEvent({ sent: { ok: r.ok, status: r.status, kind: "link_button", error: r.ok ? undefined : r.response } });
+  if (!r.ok) await reply(to, `${text}\n\n${url}`);
 }
 
 /** A message with tap buttons. If WhatsApp refuses the buttons, the same words go out as plain text. */
@@ -87,8 +73,8 @@ async function sendWelcome(to: string, profileName?: string) {
 
 async function sendComplaintList(to: string, senderKey: string) {
   const list = await listForSender(senderKey);
-  if (list.length) await reply(to, "Your recent complaints:\n" + list.map((c) => `• ${c.ticketId} — ${c.status} — ${c.title}`).join("\n"));
-  else await replyWithButtons(to, NO_COMPLAINTS, [BTN_REPORT], NO_COMPLAINTS + "\nSend a photo to start.");
+  if (list.length) await reply(to, R.complaintList(list));
+  else await replyWithButtons(to, R.noComplaints, [BTN_REPORT], R.noComplaints);
 }
 
 async function askForLocation(to: string) {
@@ -126,12 +112,7 @@ async function mutate<T>(msg: InboundMessage, fn: (conv: Conversation) => T): Pr
 }
 
 async function register(to: string, senderKey: string, pending: PendingReport, latitude: number, longitude: number) {
-  await reply(
-    to,
-    pending.audioFiles.length > 0
-      ? "🔎 Analysing your photo and voice note. This can take up to a minute…"
-      : "🔎 Analysing your photo, this takes about 15 seconds…",
-  );
+  await reply(to, pending.audioFiles.length > 0 ? R.analysingPhotoVoice : R.analysingPhoto);
   const result = await processReport({
     source: "whatsapp",
     senderKey,
@@ -144,18 +125,10 @@ async function register(to: string, senderKey: string, pending: PendingReport, l
   });
 
   if (!result.ok) {
-    await reply(
-      to,
-      result.code === "NOT_CIVIC"
-        ? "I could not see a public civic problem in that photo, so I did not register a complaint.\n" +
-            `What I saw: ${result.seen}\n\n` +
-            "Please send a clear photo of the problem (pothole, garbage, blocked drain, water leak, broken street light).\n" +
-            "इस फ़ोटो में कोई सार्वजनिक समस्या नहीं दिखी। कृपया समस्या की साफ़ फ़ोटो भेजें।"
-        : "That photo is too unclear to use. Please send a clearer photo of the problem. / कृपया साफ़ फ़ोटो भेजें।",
-    );
+    await reply(to, result.code === "NOT_CIVIC" ? R.notCivic(result.seen) : R.unusable);
     return;
   }
-  await reply(to, successMessage(result.complaint));
+  await replyWithLink(to, successText(result.complaint), trackUrl(result.complaint));
 }
 
 type ImageDecision =
@@ -182,7 +155,7 @@ async function processMessage(msg: InboundMessage) {
         file = (await downloadMedia(msg.image.id)).file;
       } catch (err) {
         console.error("[conversation] media download failed", err);
-        await reply(to, "Sorry, I couldn't download that photo. Please try sending it again.");
+        await reply(to, R.photoDownloadFailed);
         return;
       }
       const caption = msg.image.caption?.trim() ?? "";
@@ -206,9 +179,9 @@ async function processMessage(msg: InboundMessage) {
         return { action: "ASK" };
       });
 
-      if (decision.action === "ATTACHED") await reply(to, "Added this photo to your report. Please share the location to finish.");
+      if (decision.action === "ATTACHED") await reply(to, R.photoAdded);
       else if (decision.action === "ASK") {
-        await reply(to, "📸 Got your photo.");
+        await reply(to, R.gotPhoto);
         await askForLocation(to);
       } else await register(to, msg.senderKey, decision.pending, decision.latitude, decision.longitude);
       return;
@@ -229,7 +202,7 @@ async function processMessage(msg: InboundMessage) {
         return null;
       });
       if (taken) await register(to, msg.senderKey, taken, latitude, longitude);
-      else await reply(to, "📍 Got the location. Now send a photo of the problem within 10 minutes.");
+      else await reply(to, R.gotLocation);
       return;
     }
 
@@ -237,7 +210,7 @@ async function processMessage(msg: InboundMessage) {
       if (!msg.audio) return;
       const waiting = await mutate(msg, (conv) => conv.state === "AWAITING_LOCATION" && !!conv.pending);
       if (!waiting) {
-        await reply(to, "🎙️ Voice notes can be added to a report. Please send a photo of the problem first.");
+        await reply(to, R.voiceNeedsPhoto);
         return;
       }
       let file: string;
@@ -245,7 +218,7 @@ async function processMessage(msg: InboundMessage) {
         file = (await downloadMedia(msg.audio.id)).file;
       } catch (err) {
         console.error("[conversation] audio download failed", err);
-        await reply(to, "I couldn't download that voice note. Please share the location to finish your report.");
+        await reply(to, R.voiceDownloadFailed);
         return;
       }
       const attached = await mutate(msg, (conv) => {
@@ -255,12 +228,7 @@ async function processMessage(msg: InboundMessage) {
         }
         return false;
       });
-      await reply(
-        to,
-        attached
-          ? "🎙️ Got your voice note and added it. Please share the location to finish."
-          : "I got your voice note, but there is no report waiting any more. Please send the photo again.",
-      );
+      await reply(to, attached ? R.voiceAdded : R.voiceOrphan);
       return;
     }
 
@@ -272,12 +240,8 @@ async function processMessage(msg: InboundMessage) {
       if (trackMatch) {
         await mutate(msg, () => undefined); // records that this person just wrote (opens the 24h window)
         const c = await bindToSender(trackMatch[1], trackMatch[2], msg.senderKey, to);
-        await reply(
-          to,
-          c
-            ? `✅ WhatsApp updates are on for ${c.ticketId}. We will message you when staff update it.\nTrack: ${trackUrl(c)}`
-            : "I could not link that complaint. Check you sent the whole message from the website; it may already be linked.",
-        );
+        if (c) await replyWithLink(to, R.trackOn(c.ticketId), trackUrl(c));
+        else await reply(to, R.trackFailed);
         return;
       }
 
@@ -285,10 +249,8 @@ async function processMessage(msg: InboundMessage) {
       if (statusMatch) {
         await mutate(msg, () => undefined);
         const c = await getOwnByTicket(msg.senderKey, statusMatch[1]);
-        await reply(
-          to,
-          c ? `${c.ticketId}: ${c.status}\n${c.title}\nTrack: ${trackUrl(c)}` : "I couldn't find that complaint for this number. Check the ID, or send *my complaints*.",
-        );
+        if (c) await replyWithLink(to, R.statusLine(c), trackUrl(c));
+        else await reply(to, R.statusNotFound);
         return;
       }
       if (/^(my complaints|complaints|my status|status)$/i.test(text)) {
@@ -305,7 +267,7 @@ async function processMessage(msg: InboundMessage) {
         }
         return false;
       });
-      if (appended) await reply(to, "Noted. Please share the location (📎 > Location) to finish your report.");
+      if (appended) await reply(to, R.noted);
       else await sendWelcome(to, msg.profileName);
       return;
     }
@@ -331,6 +293,6 @@ async function processMessage(msg: InboundMessage) {
 
     default:
       await mutate(msg, () => undefined);
-      await reply(to, "I can only read photos, voice notes, locations and text. Please send a photo of the problem.");
+      await reply(to, R.onlyMedia);
   }
 }

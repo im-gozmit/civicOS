@@ -123,6 +123,8 @@ export interface Notification {
   complaintId: string;
   title?: string; // short label for staff, such as "Status: In progress" (older notifications have none)
   text: string;
+  link?: string; // the tracking page; sent as a tap button, never pasted into the chat text
+  linkLabel?: string; // the button's text
   state: "PENDING" | "SENT" | "FAILED";
   attempts: number;
   lastError: string | null;

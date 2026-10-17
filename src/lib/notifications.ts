@@ -1,5 +1,5 @@
 import { withRepo } from "@/lib/repo";
-import { sendText } from "@/lib/whatsapp/cloud";
+import { sendLinkButton, sendText } from "@/lib/whatsapp/cloud";
 import { logEvent } from "@/lib/events";
 
 const WINDOW_MS = 23 * 60 * 60 * 1000; // 24h window with a safety margin
@@ -33,7 +33,7 @@ export async function deliverNotification(notificationId: string): Promise<void>
       if (typedNumber) {
         n.attempts += 1;
         await r.saveNotification(n);
-        return { phone: typedNumber, text: n.text, typed: true };
+        return { phone: typedNumber, text: n.text, link: n.link, linkLabel: n.linkLabel, typed: true };
       }
       const lastInbound = conv?.lastInboundAt ? Date.parse(conv.lastInboundAt) : 0;
       if (Date.now() - lastInbound > WINDOW_MS) {
@@ -46,7 +46,7 @@ export async function deliverNotification(notificationId: string): Promise<void>
       }
       n.attempts += 1;
       await r.saveNotification(n);
-      return { phone: conv!.phone, text: n.text, typed: false };
+      return { phone: conv!.phone, text: n.text, link: n.link, linkLabel: n.linkLabel, typed: false };
     });
     if (!job) return;
 
@@ -55,7 +55,11 @@ export async function deliverNotification(notificationId: string): Promise<void>
     let transient = false;
     let error: string | null = null;
     try {
-      const res = await sendText(job.phone, job.text);
+      // A tap button carries the tracking link. If WhatsApp refuses the button, the update still goes out as plain text with the link.
+      let res = job.link ? await sendLinkButton(job.phone, { body: job.text, label: job.linkLabel || "Track", url: job.link }) : await sendText(job.phone, job.text);
+      if (!res.ok && job.link) res = await sendText(job.phone, `${job.text}
+
+${job.link}`);
       ok = res.ok;
       transient = res.status === 429 || res.status >= 500;
       if (!ok) error = job.typed ? `HTTP ${res.status} (the citizen has not messaged the bot yet; ask them to tap the WhatsApp link on their tracking page)` : `HTTP ${res.status}`;

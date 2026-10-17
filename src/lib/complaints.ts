@@ -1,10 +1,12 @@
 import { randomBytes, randomUUID } from "crypto";
 import { withRepo } from "@/lib/repo";
 import type { Repo } from "@/lib/repo";
-import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
+import { canTransition, NEEDS_REASON } from "@/lib/transitions";
 import { findDuplicateCandidates, WINDOW_DAYS } from "@/lib/duplicates";
 import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
+import { duplicateLinkedContent, statusUpdateContent, teamConfirmedContent } from "@/lib/notificationText";
+import type { NotificationContent } from "@/lib/notificationText";
 import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Jurisdiction, Notification, RepairCheck, Severity } from "@/lib/types";
 
 // --- Triage fallback --------------------------------------------------------------------------
@@ -80,8 +82,21 @@ export function fallbackAnalysis(caption: string): Analysis {
 
 // --- Small helpers ----------------------------------------------------------------------------
 
-async function queueNotification(r: Repo, complaintId: string, title: string, text: string, now: string): Promise<string> {
-  const n: Notification = { id: randomUUID(), complaintId, title, text, state: "PENDING", attempts: 0, lastError: null, createdAt: now, sentAt: null };
+/** Queues a WhatsApp update. The tracking link rides along as a tap button, not as text in the chat. */
+async function queueNotification(r: Repo, complaintId: string, content: NotificationContent, link: string, now: string): Promise<string> {
+  const n: Notification = {
+    id: randomUUID(),
+    complaintId,
+    title: content.title,
+    text: content.text,
+    link,
+    linkLabel: content.linkLabel,
+    state: "PENDING",
+    attempts: 0,
+    lastError: null,
+    createdAt: now,
+    sentAt: null,
+  };
   await r.insertNotification(n);
   return n.id;
 }
@@ -265,13 +280,7 @@ export function changeStatus(
     // Internal notes are kept in the admin log only and never shown to the citizen.
     if (internalNote.trim()) addInternalNote(c, now, adminLabel, internalNote.trim());
     await r.saveComplaint(c);
-    const notificationId = await queueNotification(
-      r,
-      c.id,
-      `Status: ${STATUS_LABEL[to]}`,
-      `📣 Update on ${c.ticketId}: ${STATUS_LABEL[to]}.` + (publicNote.trim() ? `\n${publicNote.trim()}` : "") + `\nTrack: ${trackUrl(c)}`,
-      now,
-    );
+    const notificationId = await queueNotification(r, c.id, statusUpdateContent(c.ticketId, to, publicNote), trackUrl(c), now);
     return { ok: true, complaint: c, notificationId };
   });
 }
@@ -364,13 +373,7 @@ export function verifyAssignment(
         : `Corrected team from ${TEAM_LABEL[current.suggestedTeam as TeamId]} to ${TEAM_LABEL[finalTeam]}${note.trim() ? `: ${note.trim()}` : ""}`,
     );
     await r.saveComplaint(c);
-    const notificationId = await queueNotification(
-      r,
-      c.id,
-      `Team confirmed: ${TEAM_LABEL[finalTeam]}`,
-      `📣 Update on ${c.ticketId}: your report has been reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.\nTrack: ${trackUrl(c)}`,
-      now,
-    );
+    const notificationId = await queueNotification(r, c.id, teamConfirmedContent(c.ticketId, finalTeam), trackUrl(c), now);
     return { ok: true, complaint: c, notificationId };
   });
 }
@@ -464,13 +467,7 @@ export function linkDuplicate(
     await r.saveComplaint(c);
     await r.saveComplaint(primary);
 
-    const notificationId = await queueNotification(
-      r,
-      c.id,
-      "Linked to an earlier report",
-      "📣 Update on " + c.ticketId + ": it is the same problem as an earlier report, so staff linked them and will handle it together. Your complaint stays on record.\nTrack: " + trackUrl(c),
-      now,
-    );
+    const notificationId = await queueNotification(r, c.id, duplicateLinkedContent(c.ticketId), trackUrl(c), now);
     return { ok: true, complaint: c, notificationId };
   });
 }

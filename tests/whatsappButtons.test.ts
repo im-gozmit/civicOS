@@ -56,3 +56,38 @@ describe("the buttons message sent to WhatsApp", () => {
     expect(buttons[0]).toEqual({ type: "reply", reply: { id: "A", title: "a very long button t" } });
   });
 });
+
+describe("the link-button message sent to WhatsApp", () => {
+  const saved = { t: process.env.WHATSAPP_ACCESS_TOKEN, p: process.env.WHATSAPP_PHONE_NUMBER_ID };
+  beforeEach(() => {
+    process.env.WHATSAPP_ACCESS_TOKEN = "test-token";
+    process.env.WHATSAPP_PHONE_NUMBER_ID = "123456";
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    process.env.WHATSAPP_ACCESS_TOKEN = saved.t ?? "";
+    if (saved.p === undefined) delete process.env.WHATSAPP_PHONE_NUMBER_ID;
+    else process.env.WHATSAPP_PHONE_NUMBER_ID = saved.p;
+  });
+
+  it("is an interactive 'cta_url' message: the link is in the button, the text has none", async () => {
+    const { sendLinkButton } = await import("@/lib/whatsapp/cloud");
+    interface SentLink {
+      type?: string;
+      interactive: { type: string; body: { text: string }; action: { name: string; parameters: { display_text: string; url: string } } };
+    }
+    let sentBody = {} as SentLink;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      sentBody = JSON.parse(String((init as RequestInit).body));
+      return new Response(JSON.stringify({ messages: [{ id: "wamid.y" }] }), { status: 200 });
+    });
+    const r = await sendLinkButton("919876543210", { body: "Update\n\nअपडेट", label: "Track | ट्रैक करें और भी लंबा", url: "https://example.test/t/abc" });
+    expect(r.ok).toBe(true);
+    expect(sentBody.type).toBe("interactive");
+    expect(sentBody.interactive.type).toBe("cta_url");
+    expect(sentBody.interactive.body.text).not.toContain("http");
+    expect(sentBody.interactive.action.name).toBe("cta_url");
+    expect(sentBody.interactive.action.parameters.url).toBe("https://example.test/t/abc");
+    expect(sentBody.interactive.action.parameters.display_text.length).toBeLessThanOrEqual(20);
+  });
+});

@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The WhatsApp conversation is tested with the outside world replaced by fakes: no real messages
 // are sent, no files are downloaded and no AI is called. The database is real (a temporary one).
-const sent: Array<{ kind: "text" | "location" | "buttons"; to: string; text: string; buttons?: Array<{ id: string; title: string }> }> = [];
+const sent: Array<{ kind: "text" | "location" | "buttons" | "link"; to: string; text: string; buttons?: Array<{ id: string; title: string }>; url?: string; label?: string }> = [];
 let buttonsFail = false;
+let linkButtonFail = false;
 const reports: Array<{ mediaFiles: string[]; audioFiles: string[]; caption: string; latitude: number; longitude: number }> = [];
 let reportResult: "ok" | "not_civic" = "ok";
 
@@ -15,6 +16,11 @@ vi.mock("@/lib/whatsapp/cloud", () => ({
   sendButtons: async (to: string, o: { body: string; buttons: Array<{ id: string; title: string }> }) => {
     if (buttonsFail) return { ok: false, status: 400, response: {} };
     sent.push({ kind: "buttons", to, text: o.body, buttons: o.buttons });
+    return { ok: true, status: 200, response: {} };
+  },
+  sendLinkButton: async (to: string, o: { body: string; label: string; url: string }) => {
+    if (linkButtonFail) return { ok: false, status: 400, response: {} };
+    sent.push({ kind: "link", to, text: o.body, url: o.url, label: o.label });
     return { ok: true, status: 200, response: {} };
   },
   sendLocationRequest: async (to: string, text: string) => {
@@ -72,6 +78,7 @@ beforeEach(() => {
   reports.length = 0;
   reportResult = "ok";
   buttonsFail = false;
+  linkButtonFail = false;
 });
 
 describe("WhatsApp conversation", () => {
@@ -151,6 +158,45 @@ describe("WhatsApp conversation", () => {
     await handleInbound(msg(a, { type: "image", image: { id: "m1" } }));
     await handleInbound(msg(b, { type: "location", location: { latitude: 25.9, longitude: 82.3 } }));
     expect(reports).toHaveLength(0); // b's location must not complete a's report
+  });
+
+  it("sends the registered message in English and Hindi, with the tracking link as a button and not in the text", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "image", image: { id: "m1" } }));
+    await handleInbound(msg(who, { type: "location", location: { latitude: 25.4, longitude: 81.8 } }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("link");
+    expect(last?.text).toContain("CIV-TEST01");
+    expect(last?.text).toContain("शिकायत दर्ज हो गई");
+    expect(last?.text).not.toContain("http");
+    expect(last?.url?.endsWith("/t/tok")).toBe(true);
+    expect((last?.label ?? "").length).toBeLessThanOrEqual(20);
+  });
+
+  it("puts the link in the text only if WhatsApp refuses the button", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    linkButtonFail = true;
+    await handleInbound(msg(who, { type: "image", image: { id: "m1" } }));
+    await handleInbound(msg(who, { type: "location", location: { latitude: 25.4, longitude: 81.8 } }));
+    const last = textsTo(who.from).at(-1);
+    expect(last?.kind).toBe("text");
+    expect(last?.text).toContain("/t/tok");
+  });
+
+  it("every message of a normal conversation includes Hindi", async () => {
+    const { handleInbound } = await import("@/lib/whatsapp/conversation");
+    const who = person();
+    await handleInbound(msg(who, { type: "text", text: "hello" })); // welcome
+    await handleInbound(msg(who, { type: "audio", audio: { id: "a1" } })); // voice with no report
+    await handleInbound(msg(who, { type: "sticker" })); // something it cannot read
+    await handleInbound(msg(who, { type: "image", image: { id: "m1" } })); // photo, asks for the location
+    await handleInbound(msg(who, { type: "text", text: "near the market" })); // extra description
+    await handleInbound(msg(who, { type: "location", location: { latitude: 25.4, longitude: 81.8 } })); // registered
+    const mine = textsTo(who.from);
+    expect(mine.length).toBeGreaterThanOrEqual(6);
+    for (const m of mine) expect(m.text).toMatch(/[ऀ-ॿ]/);
   });
 
   it("answers an unknown text with help and records that the person just wrote", async () => {

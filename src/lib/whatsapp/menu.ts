@@ -58,4 +58,3 @@ export const HOW_IT_WORKS =
   "Your photo and location are used only for this complaint. This is a demo service: nothing is dispatched without a person.\n\n" +
   "यह ऐसे काम करता है: फ़ोटो भेजें, लोकेशन बताएं, शिकायत नंबर पाएं, और हर कदम की जानकारी यहीं मिलेगी।";
 
-export const NO_COMPLAINTS = "You have not reported anything yet. Whenever you are ready, send me a photo of the problem and we will take it from there.";
