@@ -146,10 +146,16 @@ export default function Home() {
 
           <div className="relative mx-auto w-full max-w-[28rem] self-end pb-0 lg:mx-0 lg:justify-self-end">
             <AzadStatue />
-            <div className="mt-10 md:absolute md:bottom-6 md:right-[-3rem] md:mt-0 md:w-[260px] md:origin-bottom-right md:scale-[0.68]">
+            {/* Stacked layout: the phone sits under the statue. */}
+            <div className="mt-10 md:hidden">
               <PhoneMock />
             </div>
           </div>
+        </div>
+
+        {/* Desktop layout: the phone stands against the right edge of the hero, beside the statue. */}
+        <div className="phone-side absolute bottom-6 right-4 z-10 hidden w-[260px] md:block">
+          <PhoneMock />
         </div>
       </section>
 

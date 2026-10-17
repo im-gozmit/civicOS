@@ -370,3 +370,34 @@ html[data-view="classic"] .hero-card .wa-step {
   }
 }
 
+
+/*
+  Desktop hero: the phone is enlarged with zoom (so its layout grows with it) and shrinks a step at a time on
+  narrower windows so it never crowds the statue.
+*/
+@media (min-width: 885px) {
+  .phone-side {
+    zoom: 0.85;
+  }
+}
+@media (min-width: 1180px) {
+  .phone-side {
+    zoom: 1.02;
+  }
+}
+@media (min-width: 1400px) {
+  .phone-side {
+    zoom: 1.2;
+  }
+}
+@media (min-width: 1550px) {
+  .phone-side {
+    zoom: 1.35;
+  }
+}
+@media (min-width: 1700px) {
+  .phone-side {
+    zoom: 1.5;
+  }
+}
+
