@@ -30,7 +30,7 @@ export default function Home() {
   return (
     <>
       {/* ---------- Hero: sunset over the river, with the Azad statue ---------- */}
-      <section className="relative -mt-16 overflow-hidden bg-slate-950 text-white">
+      <section className="hero relative -mt-16 overflow-hidden bg-slate-950 text-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/hero-bg.webp"
@@ -38,32 +38,32 @@ export default function Home() {
           width={1672}
           height={941}
           fetchPriority="high"
-          className="absolute inset-0 h-full w-full object-cover object-[70%_62%]"
+          className="hero-bg absolute inset-0 h-full w-full object-cover object-[70%_62%]"
         />
         {/* Dark wash on the text side so the headline stays readable, and a light one at the top for the header. */}
-        <div className="absolute inset-0 bg-black/30 bg-gradient-to-r from-black/70 via-black/30 to-transparent" aria-hidden />
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" aria-hidden />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" aria-hidden />
+        <div className="hero-wash absolute inset-0 bg-black/30 bg-gradient-to-r from-black/70 via-black/30 to-transparent" aria-hidden />
+        <div className="hero-wash absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" aria-hidden />
+        <div className="hero-wash absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" aria-hidden />
 
         <div className="container-page relative grid min-h-[36rem] items-end gap-10 pt-24 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="animate-rise self-center pb-14 lg:pb-20">
-            <p className="inline-flex items-center gap-2 rounded-md border border-white/70 bg-black/30 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
+            <p className="hero-pill inline-flex items-center gap-2 rounded-md border border-white/70 bg-black/30 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
               <MapPin className="h-4 w-4 text-amber-300" /> Prayagraj <span lang="hi" className="font-[family-name:var(--font-deva)] normal-case tracking-normal">(प्रयागराज)</span> &middot; demo service
             </p>
-            <h1 className="mt-6 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
+            <h1 className="hero-h1 mt-6 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
               Spotted a civic problem?
-              <span className="mt-2 block italic text-orange-500">
+              <span className="hero-accent mt-2 block italic text-orange-500">
                 Report it in a{" "}
                 <span className="relative inline-block not-italic">
                   minute
-                  <svg className="absolute -bottom-2 left-0 h-3 w-full text-amber-400" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden>
+                  <svg className="hero-underline absolute -bottom-2 left-0 h-3 w-full text-amber-400" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden>
                     <path d="M0 6 Q 12 0 25 5 T 50 5 T 75 5 T 100 4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
                 </span>
                 .
               </span>
             </h1>
-            <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.5)]">
+            <p className="hero-sub mt-7 max-w-xl text-lg leading-relaxed text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.5)]">
               Send a photo on WhatsApp or the web. AI suggests the right team, staff check it, and you get updates until it is fixed.
               No account needed.
             </p>
@@ -83,7 +83,7 @@ export default function Home() {
               )}
             </div>
 
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
+            <ul className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
               <li className="flex items-center gap-2"><CheckCheck className="h-4 w-4 text-amber-300" /> Free, no sign-up</li>
               <li className="flex items-center gap-2"><Languages className="h-4 w-4 text-amber-300" /> English and हिन्दी</li>
               <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-amber-300" /> Private by design</li>

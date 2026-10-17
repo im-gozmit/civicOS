@@ -22,7 +22,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${deva.variable} h-full antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${display.variable} ${deva.variable} h-full antialiased`}>
+      <head>
+        {/* Restore the visitor's chosen look before the first paint, so the page does not flash. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem("sudhaar-view")==="classic")document.documentElement.dataset.view="classic"}catch(e){}` }} />
+      </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

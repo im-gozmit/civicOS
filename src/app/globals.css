@@ -242,3 +242,73 @@ h3 {
     animation: none;
   }
 }
+
+/*
+  Look switch (button in the navbar on the home page). Default: the Prayagraj sunset photo hero.
+  "Classic": the earlier plain cream hero, without the photo. The choice is kept in localStorage and
+  applied before first paint (see the inline script in layout.tsx).
+*/
+html[data-view="classic"] .hero {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, rgb(26 23 19 / 0.045) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgb(26 23 19 / 0.045) 31px 32px),
+    var(--background);
+  color: var(--ink);
+}
+html[data-view="classic"] .hero-bg,
+html[data-view="classic"] .hero-wash {
+  display: none;
+}
+html[data-view="classic"] .hero-pill {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  backdrop-filter: none;
+  box-shadow: 3px 3px 0 0 var(--ink);
+}
+html[data-view="classic"] .hero-pill svg {
+  color: #cf3d0f;
+}
+html[data-view="classic"] .hero-h1 {
+  color: var(--ink);
+  text-shadow: none;
+}
+html[data-view="classic"] .hero-accent {
+  color: #cf3d0f;
+}
+html[data-view="classic"] .hero-underline {
+  color: var(--ink);
+}
+html[data-view="classic"] .hero-sub {
+  color: #433d32;
+  text-shadow: none;
+}
+html[data-view="classic"] .hero-trust {
+  color: #5c5547;
+}
+html[data-view="classic"] .hero-trust svg {
+  color: #cf3d0f;
+}
+/* The header never floats over a photo in the classic look. */
+html[data-view="classic"] .site-header {
+  border-color: rgb(227 220 207 / 0.7);
+  background: rgb(255 255 255 / 0.8);
+  color: var(--ink);
+  backdrop-filter: blur(16px);
+}
+html[data-view="classic"] .site-header .logo-badge {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+html[data-view="classic"] .site-header .nav-link {
+  color: #5c5547;
+  background: transparent;
+}
+html[data-view="classic"] .site-header .header-wa {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  backdrop-filter: none;
+}
+

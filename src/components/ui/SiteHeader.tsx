@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { ViewSwitch } from "@/components/ui/ViewSwitch";
 
 const LINKS = [
   { href: "/report", label: "Report" },
@@ -25,7 +26,7 @@ export function SiteHeader({ whatsappHref }: { whatsappHref: string | null }) {
   const overHero = path === "/" && !scrolled;
   return (
     <header
-      className={`sticky top-0 z-40 border-b transition-colors ${
+      className={`site-header sticky top-0 z-40 border-b transition-colors ${
         overHero ? "border-transparent bg-transparent text-white" : "border-slate-200/70 bg-white/80 text-slate-900 backdrop-blur-lg"
       }`}
     >
@@ -48,7 +49,7 @@ export function SiteHeader({ whatsappHref }: { whatsappHref: string | null }) {
                 key={l.href}
                 href={l.href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                className={`nav-link rounded-lg px-3.5 py-2 text-sm font-medium transition ${
                   overHero
                     ? active
                       ? "bg-white/20 text-white"
@@ -65,8 +66,9 @@ export function SiteHeader({ whatsappHref }: { whatsappHref: string | null }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          {path === "/" ? <ViewSwitch /> : null}
           {whatsappHref ? (
-            <a href={whatsappHref} className={`btn btn-sm hidden sm:inline-flex ${overHero ? "border-white/80 bg-black/25 text-white backdrop-blur-sm" : "btn-secondary"}`}>
+            <a href={whatsappHref} className={`header-wa btn btn-sm hidden sm:inline-flex ${overHero ? "border-white/80 bg-black/25 text-white backdrop-blur-sm" : "btn-secondary"}`}>
               <MessageCircle className="h-4 w-4 text-[#1faa59]" />
               WhatsApp
             </a>
