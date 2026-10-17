@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { ArrowRight, Camera, Heart } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { BackToTop, PrayagrajClock } from "@/components/ui/FooterExtras";
 
 const LINKEDIN = "https://linkedin.com/in/gozmit";
 const GITHUB = "https://github.com/im-gozmit";
@@ -21,80 +22,95 @@ function GitHubMark() {
   );
 }
 
+/** A footer link whose arrow slides in on hover. */
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="group inline-flex items-center gap-1.5 text-slate-300 transition hover:text-white">
+      <span className="relative">
+        {children}
+        <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-orange-400 transition-all duration-300 group-hover:w-full" />
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 -translate-x-1 text-orange-400 opacity-0 transition duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+    </Link>
+  );
+}
+
+const social =
+  "group inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 text-sm font-semibold text-slate-100 transition duration-300 hover:-translate-y-1 hover:border-orange-400 hover:bg-orange-500 hover:text-slate-950 hover:shadow-[0_8px_0_-2px_rgb(255_255_255/0.15)]";
+
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-slate-200 bg-white pb-24 md:pb-0">
-      <div className="container-page grid gap-8 py-10 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="space-y-3">
-          <Logo size="lg" />
-          <p className="max-w-sm text-sm leading-relaxed text-slate-600">
+    <footer className="relative mt-16 overflow-hidden bg-slate-900 pb-24 text-slate-300 md:pb-0">
+      {/* A strip of sunset along the top edge. */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-amber-300 via-orange-500 to-teal-600" aria-hidden />
+      <div className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-orange-500/10 blur-3xl" aria-hidden />
+
+      <div className="container-page relative grid gap-10 py-12 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <div className="space-y-5">
+          <Logo onDark size="lg" />
+          <p className="max-w-sm text-sm leading-relaxed text-slate-400">
             Report civic problems with a photo, get a complaint number, and follow it until it is fixed.
           </p>
-          <p className="text-sm font-semibold text-slate-800">
-            Made in Prayagraj, during the Azad Buildathon.
-          </p>
+          <Link href="/report" className="btn btn-primary btn-sm">
+            <Camera className="h-4 w-4" /> Report a problem
+          </Link>
         </div>
-        <nav aria-label="Footer" className="space-y-2 text-sm">
-          <p className="font-semibold text-slate-900">Citizens</p>
-          <ul className="space-y-1.5 text-slate-600">
-            <li>
-              <Link className="hover:text-teal-700" href="/report">
-                Report a problem
-              </Link>
-            </li>
-            <li>
-              <Link className="hover:text-teal-700" href="/track">
-                Track a complaint
-              </Link>
-            </li>
-            <li>
-              <Link className="hover:text-teal-700" href="/#map">
-                Problems nearby
-              </Link>
-            </li>
+
+        <nav aria-label="Footer" className="space-y-3 text-sm">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Citizens</p>
+          <ul className="space-y-2.5">
+            <li><FooterLink href="/report">Report a problem</FooterLink></li>
+            <li><FooterLink href="/track">Track a complaint</FooterLink></li>
+            <li><FooterLink href="/#map">Problems nearby</FooterLink></li>
           </ul>
         </nav>
-        <div className="space-y-2 text-sm">
-          <p className="font-semibold text-slate-900">Staff</p>
-          <ul className="space-y-1.5 text-slate-600">
-            <li>
-              <Link className="hover:text-teal-700" href="/admin">
-                Staff sign in
-              </Link>
-            </li>
+
+        <div className="space-y-3 text-sm">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Staff</p>
+          <ul className="space-y-2.5">
+            <li><FooterLink href="/admin">Staff sign in</FooterLink></li>
           </ul>
         </div>
+
+        <div className="space-y-3 text-sm">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Built at</p>
+          <p className="leading-relaxed text-slate-300">The Azad Buildathon, with Azad Reads and Azad Labs, in Prayagraj.</p>
+          <PrayagrajClock />
+        </div>
       </div>
-      <div className="border-t border-slate-100">
+
+      {/* Big wordmark: a faint watermark that lights up orange when hovered. */}
+      <div className="group relative select-none overflow-hidden" aria-hidden>
+        <p
+          lang="hi"
+          className="whitespace-nowrap text-center font-[family-name:var(--font-deva)] text-[28vw] font-black leading-[0.9] text-white/[0.11] transition-colors duration-500 group-hover:text-orange-500/90 md:text-[16vw]"
+        >
+          सुधार
+        </p>
+      </div>
+
+      <div className="border-t border-white/10">
         <p className="container-page py-4 text-xs leading-relaxed text-slate-500">
           Sudhaar is a demo service for Prayagraj. The teams shown are demo queues, not official government departments, and a report
           here does not mean a department has accepted it.
         </p>
       </div>
-      <div className="border-t-2 border-slate-900 bg-slate-900 text-slate-100">
-        <div className="container-page flex flex-col items-center justify-between gap-3 py-4 sm:flex-row">
-          <p className="flex items-center gap-1.5 text-sm font-semibold">
-            Made with <Heart className="h-4 w-4 fill-teal-500 text-teal-500" aria-label="love" /> for Prayagraj by Mayank
+
+      <div className="border-t border-white/10 bg-black/30">
+        <div className="container-page flex flex-col items-center justify-between gap-4 py-5 md:flex-row">
+          <p className="group/love flex items-center gap-1.5 text-sm font-semibold text-slate-100">
+            Made with
+            <Heart className="h-4 w-4 fill-orange-500 text-orange-500 transition duration-300 group-hover/love:scale-150 group-hover/love:fill-rose-500 group-hover/love:text-rose-500" aria-label="love" />
+            for Prayagraj by Mayank
           </p>
-          <div className="flex items-center gap-2">
-            <a
-              href={LINKEDIN}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Mayank on LinkedIn"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/30 px-3 text-sm font-semibold transition hover:border-white hover:bg-white/10"
-            >
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a href={LINKEDIN} target="_blank" rel="noopener noreferrer" aria-label="Mayank on LinkedIn" className={social}>
               <LinkedInMark /> LinkedIn
             </a>
-            <a
-              href={GITHUB}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Mayank on GitHub"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/30 px-3 text-sm font-semibold transition hover:border-white hover:bg-white/10"
-            >
+            <a href={GITHUB} target="_blank" rel="noopener noreferrer" aria-label="Mayank on GitHub" className={social}>
               <GitHubMark /> GitHub
             </a>
+            <BackToTop />
           </div>
         </div>
       </div>
