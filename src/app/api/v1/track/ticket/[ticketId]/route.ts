@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CATEGORY_LABEL, getByTicket } from "@/lib/complaints";
-import { allow, clientIp } from "@/lib/rateLimit";
+import { allow, clientIp, publicLimitsOn } from "@/lib/rateLimit";
 import { STATUS_LABEL } from "@/lib/transitions";
 
 // Public, minimal lookup by ticket number. Ticket numbers are guessable, so this deliberately
 // reveals very little: no photo, no exact location, no notes, no contact details.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ ticketId: string }> }) {
-  if (!(await allow(`track:${clientIp(req.headers)}`, 20, 10 * 60 * 1000))) {
+  if (publicLimitsOn() && !(await allow(`track:${clientIp(req.headers)}`, 20, 10 * 60 * 1000))) {
     return NextResponse.json({ error: "Too many lookups. Please wait a few minutes." }, { status: 429 });
   }
   const { ticketId } = await params;

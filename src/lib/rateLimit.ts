@@ -12,6 +12,16 @@ export async function allow(key: string, max: number, windowMs: number): Promise
   return true;
 }
 
+/**
+ * The per-connection limits on PUBLIC pages (sending reports, the map data, looking up a ticket) are OFF by default,
+ * so many people can try the site at once, for example at a demo where everyone shares one Wi-Fi.
+ * Set RATE_LIMITS=on to switch them back on for a public launch. Staff sign-in throttling and the staff
+ * upload limit are always on.
+ */
+export function publicLimitsOn(): boolean {
+  return process.env.RATE_LIMITS === "on";
+}
+
 /** How many times `key` was recorded in the window (does not record anything). */
 export async function rateCount(key: string, windowMs: number): Promise<number> {
   const since = new Date(Date.now() - windowMs).toISOString();

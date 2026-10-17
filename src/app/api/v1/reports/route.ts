@@ -4,7 +4,7 @@ import { processReport } from "@/lib/reportPipeline";
 import { CATEGORY_LABEL } from "@/lib/complaints";
 import { trackUrl } from "@/lib/links";
 import { maskNumber, normalizeWhatsappNumber } from "@/lib/phone";
-import { allow, clientIp } from "@/lib/rateLimit";
+import { allow, clientIp, publicLimitsOn } from "@/lib/rateLimit";
 import { saveAudioUpload, saveImageUpload } from "@/lib/uploads";
 
 // Public website report. Same pipeline as WhatsApp; no account needed.
@@ -17,8 +17,13 @@ function num(v: FormDataEntryValue | null): number | null {
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req.headers);
-  if (!(await allow(`report:${ip}`, 5, 60 * 60 * 1000)) || !(await allow("report:global", 300, 24 * 60 * 60 * 1000))) {
+  // Per-connection limit: off unless RATE_LIMITS=on (see rateLimit.ts).
+  if (publicLimitsOn() && !(await allow(`report:${ip}`, Number(process.env.REPORT_LIMIT_PER_HOUR) || 5, 60 * 60 * 1000))) {
     return NextResponse.json({ ok: false, error: "Too many reports from this connection. Please try again later." }, { status: 429 });
+  }
+  // A high daily ceiling stays on in every mode, so a bot cannot use up the AI quota or fill the queue.
+  if (!(await allow("report:global", Number(process.env.REPORT_LIMIT_PER_DAY) || 1000, 24 * 60 * 60 * 1000))) {
+    return NextResponse.json({ ok: false, error: "We are receiving a very large number of reports right now. Please try again in a little while." }, { status: 429 });
   }
 
   const form = await req.formData().catch(() => null);
