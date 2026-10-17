@@ -21,13 +21,21 @@ export async function deliverNotification(notificationId: string): Promise<void>
       if (!n || n.state !== "PENDING") return null;
       const c = await r.getComplaint(n.complaintId);
       const conv = c ? await r.getConversation(c.senderKey) : undefined;
-      if (!c || !conv) {
+      // A website complaint can carry an optional number the citizen typed. They may never have messaged the bot,
+      // so WhatsApp can refuse the message; that is recorded below and never touches the complaint.
+      const typedNumber = c && !conv && c.senderKey.startsWith("web:") && c.senderPhone ? c.senderPhone : "";
+      if (!c || (!conv && !typedNumber)) {
         n.state = "FAILED";
         n.lastError = "NO_WHATSAPP_RECIPIENT";
         await r.saveNotification(n);
         return null;
       }
-      const lastInbound = conv.lastInboundAt ? Date.parse(conv.lastInboundAt) : 0;
+      if (typedNumber) {
+        n.attempts += 1;
+        await r.saveNotification(n);
+        return { phone: typedNumber, text: n.text, typed: true };
+      }
+      const lastInbound = conv?.lastInboundAt ? Date.parse(conv.lastInboundAt) : 0;
       if (Date.now() - lastInbound > WINDOW_MS) {
         // Free-form messages are only allowed within 24h of the citizen's last message.
         // An approved template message would be needed; not built yet.
@@ -38,7 +46,7 @@ export async function deliverNotification(notificationId: string): Promise<void>
       }
       n.attempts += 1;
       await r.saveNotification(n);
-      return { phone: conv.phone, text: n.text };
+      return { phone: conv!.phone, text: n.text, typed: false };
     });
     if (!job) return;
 
@@ -50,7 +58,7 @@ export async function deliverNotification(notificationId: string): Promise<void>
       const res = await sendText(job.phone, job.text);
       ok = res.ok;
       transient = res.status === 429 || res.status >= 500;
-      if (!ok) error = `HTTP ${res.status}`;
+      if (!ok) error = job.typed ? `HTTP ${res.status} (the citizen has not messaged the bot yet; ask them to tap the WhatsApp link on their tracking page)` : `HTTP ${res.status}`;
     } catch (err) {
       transient = true;
       error = err instanceof Error ? err.message : "send failed";

@@ -15,11 +15,13 @@ import {
   Navigation,
   RefreshCw,
   Send,
+  ShieldCheck,
   Square,
   Trash2,
   X,
 } from "lucide-react";
 import type { LatLng } from "@/components/public/LocationPicker";
+import { normalizeWhatsappNumber } from "@/lib/phone";
 import { AgentReport, AgentTerminal } from "@/components/public/AgentTerminal";
 import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
 import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
@@ -75,6 +77,17 @@ const T = {
     another: "Report another problem",
     privacy: "Your photo and location are used only to handle this complaint. No account is needed.",
     needsReview: "A person will review this report.",
+    stepUpdates: "Updates on WhatsApp",
+    waLabel: "Your WhatsApp number",
+    waPh: "98765 43210",
+    waTitle: "Optional. You can skip this.",
+    waDisclaimer:
+      "You do not need to give a number to report a problem or to track it. If you add one, it is used only to send updates about this complaint, it is stored encrypted, and it is never shown on the public map or to other people.",
+    waHow: "WhatsApp only lets us message you after you have messaged us, so after reporting you will tap one button to switch the updates on.",
+    waBad: "That number does not look right. Check it, or leave it empty: it is optional.",
+    whatsappOn: "Switch on WhatsApp updates",
+    updatesTo: "Updates number",
+    updatesNote: "Tap \"Switch on WhatsApp updates\" below and send the message once, so WhatsApp lets us write to you.",
   },
   hi: {
     title: "समस्या दर्ज करें",
@@ -118,6 +131,17 @@ const T = {
     another: "एक और समस्या दर्ज करें",
     privacy: "आपकी फ़ोटो और लोकेशन का उपयोग केवल इस शिकायत के लिए होता है। खाता ज़रूरी नहीं है।",
     needsReview: "कोई व्यक्ति इस रिपोर्ट की समीक्षा करेगा।",
+    stepUpdates: "WhatsApp पर अपडेट",
+    waLabel: "आपका WhatsApp नंबर",
+    waPh: "98765 43210",
+    waTitle: "वैकल्पिक। आप इसे छोड़ सकते हैं।",
+    waDisclaimer:
+      "समस्या दर्ज करने या उसकी स्थिति देखने के लिए नंबर देना ज़रूरी नहीं है। अगर आप नंबर देते हैं, तो उसका उपयोग केवल इस शिकायत के अपडेट भेजने के लिए होगा, वह एन्क्रिप्टेड रखा जाएगा, और सार्वजनिक नक्शे पर या किसी और को कभी नहीं दिखेगा।",
+    waHow: "WhatsApp तभी हमें आपको संदेश भेजने देता है जब आप पहले हमें संदेश भेज चुके हों, इसलिए रिपोर्ट के बाद अपडेट चालू करने के लिए एक बटन दबाएं।",
+    waBad: "यह नंबर सही नहीं लगता। जाँच लें, या खाली छोड़ दें: यह वैकल्पिक है।",
+    whatsappOn: "WhatsApp अपडेट चालू करें",
+    updatesTo: "अपडेट का नंबर",
+    updatesNote: "नीचे \"WhatsApp अपडेट चालू करें\" दबाकर एक बार संदेश भेजें, ताकि WhatsApp हमें आपको लिखने दे।",
   },
 } as const;
 
@@ -127,6 +151,7 @@ interface Success {
   summary: string;
   category: string;
   severity?: string | null;
+  updatesNumber?: string | null;
   suggestedTeam: string;
   voiceHeard?: string | null;
   similarNearby?: boolean;
@@ -168,6 +193,7 @@ export function ReportForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [landmark, setLandmark] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [loc, setLoc] = useState<LatLng | null>(null);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
@@ -241,6 +267,7 @@ export function ReportForm() {
     setSeen(null);
     if (!photo) return setError(t.needPhoto);
     if (!loc) return setError(t.needLoc);
+    if (normalizeWhatsappNumber(whatsapp).kind === "invalid") return setError(t.waBad);
     setBusy(true);
     try {
       const body = new FormData();
@@ -252,6 +279,7 @@ export function ReportForm() {
       body.set("photo", small);
       body.set("description", description);
       body.set("landmark", landmark);
+      if (whatsapp.trim()) body.set("whatsapp", whatsapp.trim());
       body.set("latitude", String(loc.lat));
       body.set("longitude", String(loc.lng));
       if (voice) body.set("voice", new File([voice], "voice", { type: voice.type }));
@@ -357,6 +385,7 @@ export function ReportForm() {
             { label: en ? "Status" : "स्थिति", value: en ? "Registered, awaiting staff review" : "दर्ज, स्टाफ समीक्षा बाकी" },
             ...(loc ? [{ label: en ? "Location" : "लोकेशन", value: <span className="font-mono">{loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}</span> }] : []),
             { label: en ? "Similar reports nearby" : "आस-पास मिलती रिपोर्ट", value: done.similarNearby ? (en ? "Yes, staff will link them if it is the same" : "हाँ, एक जैसी होने पर स्टाफ जोड़ेगा") : en ? "None yet" : "अभी नहीं" },
+            ...(done.updatesNumber ? [{ label: t.updatesTo, value: <span className="font-mono">{done.updatesNumber}</span>, note: t.updatesNote }] : []),
             ...(done.voiceHeard ? [{ label: t.heard, value: done.voiceHeard }] : []),
             ...(done.needsHumanReview ? [{ label: en ? "Review" : "समीक्षा", value: t.needsReview }] : []),
           ]}
@@ -367,7 +396,7 @@ export function ReportForm() {
               </a>
               {done.whatsappLink ? (
                 <a href={done.whatsappLink} className="btn btn-whatsapp w-full py-3">
-                  <MessageCircle className="h-5 w-5" /> {t.whatsapp}
+                  <MessageCircle className="h-5 w-5" /> {done.updatesNumber ? t.whatsappOn : t.whatsapp}
                 </a>
               ) : null}
               <button type="button" className="btn btn-ghost w-full" onClick={() => window.location.reload()}>
@@ -497,6 +526,38 @@ export function ReportForm() {
             {t.landmark} <span className="font-normal text-slate-400">({t.optional})</span>
           </label>
           <input id="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} maxLength={120} placeholder={t.landmarkPh} className="field" />
+        </div>
+      </StepCard>
+
+      <StepCard n={4} done={normalizeWhatsappNumber(whatsapp).kind === "ok"} title={t.stepUpdates} optional={t.optional}>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-xl border-2 border-slate-900 bg-teal-50 p-3.5 text-sm text-slate-800">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
+            <div>
+              <p className="font-bold text-slate-900">{t.waTitle}</p>
+              <p className="mt-1 leading-relaxed">{t.waDisclaimer}</p>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="whatsapp" className="label">
+              {t.waLabel} <span className="font-normal text-slate-400">({t.optional})</span>
+            </label>
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-lg border-2 border-r-0 border-slate-300 bg-slate-100 px-3 font-mono text-sm font-bold text-slate-600">+91</span>
+              <input
+                id="whatsapp"
+                name="whatsapp"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder={t.waPh}
+                className="field rounded-l-none"
+              />
+            </div>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-500">{t.waHow}</p>
         </div>
       </StepCard>
 

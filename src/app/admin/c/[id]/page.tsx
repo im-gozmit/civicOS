@@ -8,6 +8,7 @@ import { TEAM_IDS, TEAM_LABEL } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { DuplicateCard, EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
+import { AdminImage } from "@/components/admin/AdminImage";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { SeverityBadge, StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -122,8 +123,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           {c.mediaFiles.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {c.mediaFiles.map((f) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <AdminImage
                   key={f}
                   src={`/api/v1/admin/media/${f}`}
                   alt="Photo sent by the citizen"
@@ -307,8 +307,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               <p className="text-xs text-slate-500">The AI opinion is advisory. You decide whether the issue is really fixed before closing.</p>
               {(c.repairChecks ?? []).map((r) => (
                 <div key={r.file} className="space-y-2 rounded-xl bg-slate-50 p-3 text-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={"/api/v1/admin/media/" + r.file} alt="Photo after repair" className="max-h-48 w-full rounded-lg border border-slate-200 object-cover" />
+                  <AdminImage src={"/api/v1/admin/media/" + r.file} alt="Photo after repair" className="max-h-48 w-full rounded-lg border border-slate-200 object-cover" />
                   <p className="flex flex-wrap items-center gap-2">
                     {verdictBadge(r.verdict)}
                     <span className="text-xs text-slate-500">{r.aiProvider ? "AI opinion" : "no AI available"}</span>
