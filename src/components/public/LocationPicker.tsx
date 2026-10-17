@@ -46,7 +46,7 @@ export function LocationPicker({
       }).addTo(m);
       m.on("click", (e) => onChangeRef.current({ lat: e.latlng.lat, lng: e.latlng.lng }));
       map.current = m;
-      if (value) marker.current = L.circleMarker([value.lat, value.lng], { radius: 9, color: "#0f766e", fillOpacity: 0.7 }).addTo(m);
+      if (value) marker.current = L.circleMarker([value.lat, value.lng], { radius: 9, color: "#cf3d0f", fillOpacity: 0.7 }).addTo(m);
     })();
     return () => {
       cancelled = true;
@@ -63,7 +63,7 @@ export function LocationPicker({
     const m = map.current;
     if (!L || !m || !value) return;
     if (marker.current) marker.current.setLatLng([value.lat, value.lng]);
-    else marker.current = L.circleMarker([value.lat, value.lng], { radius: 9, color: "#0f766e", fillOpacity: 0.7 }).addTo(m);
+    else marker.current = L.circleMarker([value.lat, value.lng], { radius: 9, color: "#cf3d0f", fillOpacity: 0.7 }).addTo(m);
   }, [value]);
 
   useEffect(() => {

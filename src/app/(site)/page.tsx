@@ -31,14 +31,23 @@ export default function Home() {
       <section className="bg-hero overflow-hidden">
         <div className="container-page grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="animate-rise">
-            <p className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-sm font-medium text-teal-800 shadow-sm">
-              <MapPin className="h-4 w-4" /> Prayagraj &middot; demo service
+            <p className="inline-flex items-center gap-2 rounded-md border-2 border-slate-900 bg-[var(--paper)] px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
+              <MapPin className="h-4 w-4 text-teal-600" /> Prayagraj &middot; demo service
             </p>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] text-slate-900 sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 text-5xl font-black leading-[0.98] text-slate-900 sm:text-6xl lg:text-7xl">
               Spotted a civic problem?
-              <span className="block bg-gradient-to-r from-teal-600 to-sky-600 bg-clip-text text-transparent">Report it in a minute.</span>
+              <span className="mt-2 block italic text-teal-600">
+                Report it in a{" "}
+                <span className="relative inline-block not-italic">
+                  minute
+                  <svg className="absolute -bottom-2 left-0 h-3 w-full text-slate-900" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden>
+                    <path d="M0 6 Q 12 0 25 5 T 50 5 T 75 5 T 100 4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                </span>
+                .
+              </span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
+            <p className="mt-7 max-w-xl text-lg leading-relaxed text-slate-700">
               Send a photo on WhatsApp or the web. AI suggests the right team, staff check it, and you get updates until it is fixed.
               No account needed.
             </p>
@@ -68,6 +77,21 @@ export default function Home() {
           <PhoneMock />
         </div>
       </section>
+
+      {/* ---------- Ticker ---------- */}
+      <div className="overflow-hidden border-y-2 border-slate-900 bg-slate-900 py-3 text-slate-50" aria-hidden>
+        <div className="ticker flex w-max gap-10 font-mono text-sm font-bold uppercase tracking-[0.2em]">
+          {[0, 1].map((n) => (
+            <div key={n} className="flex shrink-0 gap-10">
+              {["Potholes", "Garbage", "Drains", "Water leaks", "Street lights", "Report", "Track", "Resolve"].map((t) => (
+                <span key={t + n} className="flex items-center gap-10">
+                  {t} <span className="text-teal-400">✦</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ---------- Live numbers ---------- */}
       <section className="container-page -mt-2 py-10" aria-labelledby="stats-title">
@@ -158,9 +182,9 @@ export default function Home() {
 
       {/* ---------- Final call to action ---------- */}
       <section className="container-page py-10">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-teal-900 px-6 py-12 text-center sm:px-12">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-teal-500/20 blur-3xl" />
-          <h2 className="relative text-3xl font-extrabold text-white sm:text-4xl">See something? Say something.</h2>
+        <div className="relative overflow-hidden rounded-2xl border-2 border-slate-900 bg-slate-900 px-6 py-14 shadow-[8px_8px_0_0_rgb(207_61_15/0.9)] text-center sm:px-12">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border-[18px] border-teal-600/60" />
+          <h2 className="relative text-4xl font-black text-white sm:text-5xl">See something? <span className="italic text-teal-400">Say something.</span></h2>
           <p className="relative mx-auto mt-3 max-w-lg text-slate-300">It takes about a minute, and every report is tracked until someone fixes it.</p>
           <div className="relative mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/report" className="btn bg-white px-6 py-3.5 text-base text-slate-900 hover:bg-slate-100">
@@ -179,16 +203,19 @@ export default function Home() {
 /** A pure-CSS phone showing the WhatsApp conversation, so visitors see what to expect. */
 function PhoneMock() {
   return (
-    <div className="mx-auto w-full max-w-[320px] animate-rise [animation-delay:120ms]" aria-hidden>
-      <div className="rounded-[2.4rem] border-[7px] border-slate-900 bg-slate-900 shadow-pop">
+    <div className="relative mx-auto w-full max-w-[320px] rotate-2 animate-rise [animation-delay:120ms]" aria-hidden>
+      <span className="absolute -left-6 top-10 z-10 -rotate-6 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
+        Ticket in seconds
+      </span>
+      <div className="rounded-[2.4rem] border-[7px] border-slate-900 bg-slate-900 shadow-[10px_10px_0_0_rgb(207_61_15/0.9)]">
         <div className="overflow-hidden rounded-[1.9rem] bg-[#efeae2]">
-          <div className="flex items-center gap-2.5 bg-[#0f766e] px-4 py-3 text-white">
+          <div className="flex items-center gap-2.5 bg-[#075e54] px-4 py-3 text-white">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <MapPin className="h-4 w-4" />
             </span>
             <div className="leading-tight">
               <p className="text-sm font-semibold">CivicOS</p>
-              <p className="text-[11px] text-teal-100">online</p>
+              <p className="text-[11px] text-emerald-100">online</p>
             </div>
           </div>
 

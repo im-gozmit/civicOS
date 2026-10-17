@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Noto_Sans_Devanagari, Fraunces } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const display = Plus_Jakarta_Sans({ variable: "--font-display", subsets: ["latin"], weight: ["600", "700", "800"] });
+const display = Fraunces({ variable: "--font-display", subsets: ["latin"], style: ["normal", "italic"] });
 // Hindi text: without this the browser would fall back to a plain system font.
 const deva = Noto_Sans_Devanagari({ variable: "--font-deva", subsets: ["devanagari"] });
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f766e",
+  themeColor: "#cf3d0f",
   width: "device-width",
   initialScale: 1,
 };

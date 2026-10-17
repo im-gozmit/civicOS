@@ -10,11 +10,36 @@
 :root {
   color-scheme: light;
   --vh: 1vh; /* one percent of the window height, corrected for the desktop zoom below */
-  --background: #f6f8fb;
+  --background: #f4efe6;
+  --paper: #fffdf8;
+  --ink: #1a1713;
   --foreground: #0f172a;
 }
 
 @theme {
+  /* Warm "paper and ink" neutrals replace the cool slate, and vermilion replaces teal as the brand colour. */
+  --color-slate-50: #faf7f2;
+  --color-slate-100: #f1ece3;
+  --color-slate-200: #e3dccf;
+  --color-slate-300: #cfc6b5;
+  --color-slate-400: #a69d8c;
+  --color-slate-500: #7d7566;
+  --color-slate-600: #5c5547;
+  --color-slate-700: #433d32;
+  --color-slate-800: #2b2721;
+  --color-slate-900: #1a1713;
+  --color-slate-950: #0f0d0a;
+  --color-teal-50: #fff3ee;
+  --color-teal-100: #ffe2d6;
+  --color-teal-200: #ffc2a8;
+  --color-teal-300: #ff9a72;
+  --color-teal-400: #f86f3f;
+  --color-teal-500: #e84e1c;
+  --color-teal-600: #cf3d0f;
+  --color-teal-700: #ab300f;
+  --color-teal-800: #882913;
+  --color-teal-900: #6e2613;
+  --color-teal-950: #3c1007;
   --breakpoint-sm: 80rem;
   --breakpoint-md: 96rem;
   --breakpoint-lg: 128rem;
@@ -30,8 +55,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
-  --shadow-pop: 0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -16px rgb(15 23 42 / 0.25);
+  --shadow-card: 0 1px 0 rgb(26 23 19 / 0.04), 0 10px 24px -14px rgb(26 23 19 / 0.18);
+  --shadow-pop: 0 2px 4px rgb(26 23 19 / 0.06), 0 22px 44px -18px rgb(26 23 19 / 0.32);
+  --shadow-hard: 4px 4px 0 0 var(--ink);
 }
 
 /*
@@ -64,16 +90,17 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  font-optical-sizing: auto;
 }
 
 ::selection {
-  background: #99f6e4;
+  background: #ffc2a8;
 }
 
 /* Visible keyboard focus everywhere. */
 :where(a, button, input, select, textarea, summary):focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 3px solid #cf3d0f;
   outline-offset: 2px;
   border-radius: 0.5rem;
 }
@@ -94,31 +121,31 @@ h3 {
 @layer components {
   /* ---------- Buttons ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[15px] font-semibold transition
-      active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border-2 border-transparent px-5 py-3 text-[15px] font-bold transition
+      active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-teal-600 text-white shadow-sm hover:bg-teal-700;
+    @apply border-slate-900 bg-teal-600 text-white shadow-[3px_3px_0_0_var(--ink)] hover:-translate-x-px hover:-translate-y-px hover:bg-teal-500 hover:shadow-[4px_4px_0_0_var(--ink)];
   }
   .btn-dark {
-    @apply bg-slate-900 text-white hover:bg-slate-800;
+    @apply border-slate-900 bg-slate-900 text-slate-50 hover:bg-slate-800;
   }
   .btn-secondary {
-    @apply border border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50;
+    @apply border-slate-900 bg-[var(--paper)] text-slate-900 shadow-[3px_3px_0_0_var(--ink)] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_0_var(--ink)];
   }
   .btn-ghost {
     @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
   }
   .btn-whatsapp {
-    @apply bg-[#1faa59] text-white shadow-sm hover:bg-[#188c49];
+    @apply border-slate-900 bg-[#25d366] text-slate-900 shadow-[3px_3px_0_0_var(--ink)] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_0_var(--ink)];
   }
   .btn-sm {
-    @apply rounded-lg px-3.5 py-2 text-sm;
+    @apply rounded-md px-3.5 py-2 text-sm shadow-none;
   }
 
   /* ---------- Surfaces ---------- */
   .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+    @apply rounded-xl border border-slate-300/80 bg-[var(--paper)] shadow-card;
   }
   .card-pad {
     @apply p-5 sm:p-6;
@@ -126,8 +153,8 @@ h3 {
 
   /* ---------- Forms ---------- */
   .field {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 shadow-sm
-      placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/15;
+    @apply w-full rounded-lg border-2 border-slate-300 bg-[var(--paper)] px-3.5 py-2.5 text-[15px] text-slate-900
+      placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-4 focus:ring-teal-500/20;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
@@ -141,7 +168,7 @@ h3 {
     @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition;
   }
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.14em] text-teal-700;
+    @apply inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-teal-700 before:h-0.5 before:w-6 before:bg-teal-600;
   }
   .container-page {
     @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
@@ -151,9 +178,9 @@ h3 {
 /* Soft decorative background used behind hero sections. */
 .bg-hero {
   background:
-    radial-gradient(60rem 28rem at 85% -10%, rgb(20 184 166 / 0.18), transparent 60%),
-    radial-gradient(40rem 24rem at -10% 10%, rgb(56 189 248 / 0.14), transparent 60%),
-    linear-gradient(180deg, #ffffff 0%, var(--background) 100%);
+    repeating-linear-gradient(0deg, transparent 0 31px, rgb(26 23 19 / 0.045) 31px 32px),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgb(26 23 19 / 0.045) 31px 32px),
+    var(--background);
 }
 
 /* Gentle entrance for success states and hero content. */
@@ -199,4 +226,19 @@ h3 {
 .leaflet-popup-content {
   margin: 0.75rem 1rem;
   line-height: 1.4;
+}
+
+/* Ticker strip on the home page. */
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker {
+  animation: ticker 40s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    animation: none;
+  }
 }
