@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { z } from "zod";
+import { TEAM_DESCRIPTION, TEAM_IDS } from "../teams.ts";
 
 // Multimodal triage: one AI call that reads the photo plus the citizen's text and returns a
 // validated, enum-restricted result. Providers are tried in order (default: Gemini, then OpenAI).
@@ -19,6 +20,8 @@ const TriageSchema = z.object({
   photoQuality: z.enum(["GOOD", "POOR", "UNUSABLE"]),
   captionConsistentWithPhoto: z.boolean(),
   detectedLanguage: z.string().max(20),
+  suggestedTeam: z.enum(TEAM_IDS),
+  teamReason: z.string().max(240),
   titleEn: z.string().max(120),
   summaryEn: z.string().max(400),
   needsHumanReview: z.boolean(),
@@ -46,6 +49,8 @@ const JSON_SCHEMA = {
     photoQuality: { type: "string", enum: ["GOOD", "POOR", "UNUSABLE"] },
     captionConsistentWithPhoto: { type: "boolean" },
     detectedLanguage: { type: "string" },
+    suggestedTeam: { type: "string", enum: [...TEAM_IDS] },
+    teamReason: { type: "string" },
     titleEn: { type: "string" },
     summaryEn: { type: "string" },
     needsHumanReview: { type: "boolean" },
@@ -61,6 +66,8 @@ const JSON_SCHEMA = {
     "photoQuality",
     "captionConsistentWithPhoto",
     "detectedLanguage",
+    "suggestedTeam",
+    "teamReason",
     "titleEn",
     "summaryEn",
     "needsHumanReview",
@@ -73,6 +80,7 @@ const SYSTEM_PROMPT = [
   "Decide whether the photo shows a public civic problem: damaged road or pothole, garbage, blocked or overflowing drain, water leak or supply problem, broken street light, or similar.",
   "Rules:",
   "- Be conservative. If the photo is a selfie, screenshot, indoor/private scene, event, or unrelated, set isCivicIssue to false.",
+  "- suggestedTeam: pick the single team best placed to fix it. Teams: " + TEAM_IDS.map((id) => `${id} (${TEAM_DESCRIPTION[id]})`).join("; ") + ". Explain briefly in teamReason. A staff member will verify your choice.",
   "- Use the closest issueType; use OTHER only for a real civic problem that fits none of the categories.",
   "- severity reflects visible danger and disruption only. Do not guess counts of affected people, nearby schools or hospitals.",
   "- The caption may be in Hindi, Hinglish or English. Write titleEn and summaryEn in plain English, factual, one or two sentences.",

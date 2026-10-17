@@ -2,10 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAdmin } from "@/lib/adminAuth";
-import { ALL_QUEUES, CATEGORY_LABEL, getById } from "@/lib/complaints";
+import { ALL_QUEUES, CATEGORY_LABEL, assignmentOf, getById } from "@/lib/complaints";
+import { TEAM_IDS, TEAM_LABEL } from "@/lib/teams";
+import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { withStore } from "@/lib/localStore";
-import { QueueForm, StatusForm } from "@/components/admin/ActionForms";
+import { QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 
 export const metadata = { title: "Complaint — CivicOS admin" };
 
@@ -30,7 +32,11 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!c) notFound();
 
   const notifications = await withStore((s) => s.notifications.filter((n) => n.complaintId === id).slice(-5).reverse());
-  const options = TRANSITIONS[c.status].map((s) => ({
+  const assignment = assignmentOf(c);
+  const pendingTeam = assignment.state === "PENDING_VERIFICATION";
+  const options = TRANSITIONS[c.status]
+    .filter((s) => !(pendingTeam && s === "ASSIGNED")) // must go through team verification
+    .map((s) => ({
     value: s,
     label: STATUS_LABEL[s],
     needsReason: NEEDS_REASON.includes(s),
@@ -110,10 +116,30 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
         ) : null}
       </dl>
 
-      <section className="space-y-3 rounded border border-zinc-200 p-4">
-        <h2 className="font-semibold">Assignment</h2>
-        <QueueForm id={c.id} current={c.queue} queues={ALL_QUEUES} />
-      </section>
+      {pendingTeam ? (
+        <section className="space-y-3 rounded border-2 border-amber-400 bg-amber-50 p-4">
+          <h2 className="font-semibold">Step 1: verify the suggested team</h2>
+          <VerifyTeamCard
+            id={c.id}
+            suggestedTeam={assignment.suggestedTeam}
+            suggestedLabel={TEAM_LABEL[assignment.suggestedTeam as TeamId] ?? assignment.suggestedTeam}
+            reason={assignment.reason}
+            suggestedBy={assignment.suggestedBy}
+            teams={TEAM_IDS.map((id) => ({ id, label: TEAM_LABEL[id] }))}
+          />
+        </section>
+      ) : (
+        <section className="space-y-3 rounded border border-zinc-200 p-4">
+          <h2 className="font-semibold">Team</h2>
+          <p className="text-sm text-zinc-600">
+            {assignment.state === "CORRECTED"
+              ? `Staff corrected the suggestion (${TEAM_LABEL[assignment.suggestedTeam as TeamId] ?? assignment.suggestedTeam}) to ${c.queue}.`
+              : `Suggestion confirmed by staff: ${c.queue}.`}
+            {assignment.verifiedBy ? ` Verified by ${assignment.verifiedBy}.` : ""}
+          </p>
+          <QueueForm id={c.id} current={c.queue} queues={ALL_QUEUES} />
+        </section>
+      )}
 
       <section className="space-y-3 rounded border border-zinc-200 p-4">
         <h2 className="font-semibold">Change status</h2>

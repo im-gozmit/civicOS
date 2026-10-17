@@ -1,6 +1,6 @@
 import path from "path";
 import { MEDIA_DIR, withStore } from "@/lib/localStore";
-import { CATEGORY_LABEL, createComplaint, fallbackAnalysis, getOwnByTicket, listForSender, queueFor } from "@/lib/complaints";
+import { CATEGORY_LABEL, createComplaint, fallbackAnalysis, getOwnByTicket, listForSender, resolveTeam } from "@/lib/complaints";
 import type { Analysis } from "@/lib/complaints";
 import { runTriage } from "@/lib/ai/triage";
 import { sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
@@ -55,10 +55,11 @@ function successMessage(c: Complaint) {
   return (
     `✅ Complaint registered: *${c.ticketId}*\n` +
     `Issue: ${CATEGORY_LABEL[c.category]}\n` +
-    `Queue: ${c.queue}\n` +
+    `Suggested team: ${c.queue}\n` +
+    `(Staff will confirm the team, and we will message you when they do.)\n` +
     `Severity (suggested): ${c.severity.charAt(0) + c.severity.slice(1).toLowerCase()}\n` +
     `Summary: ${c.summary}\n` +
-    `Status: ${c.status}\n` +
+    `Status: received, awaiting staff review\n` +
     (c.needsHumanReview
       ? `Note: ${c.aiProvider ? "the automatic analysis is only a suggestion and" : "automatic analysis was unavailable, so"} a person will review this report.\n`
       : "") +
@@ -143,7 +144,9 @@ async function analyse(pending: PendingReport): Promise<{ analysis: Analysis } |
       summary: r.summaryEn,
       severity: r.severity,
       hazards: r.hazards,
-      queue: queueFor(r.issueType),
+      suggestedTeam: resolveTeam(r.issueType, r.suggestedTeam),
+      teamReason: r.teamReason,
+      teamSource: "ai",
       needsHumanReview: r.needsHumanReview || r.photoQuality === "POOR" || !r.captionConsistentWithPhoto,
       reviewReason: r.reviewReason,
       aiProvider: run.provider,

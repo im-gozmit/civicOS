@@ -66,6 +66,100 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
   );
 }
 
+export function VerifyTeamCard({
+  id,
+  suggestedTeam,
+  suggestedLabel,
+  reason,
+  suggestedBy,
+  teams,
+}: {
+  id: string;
+  suggestedTeam: string;
+  suggestedLabel: string;
+  reason: string;
+  suggestedBy: string;
+  teams: Array<{ id: string; label: string }>;
+}) {
+  const router = useRouter();
+  const [other, setOther] = useState(teams.find((t) => t.id !== suggestedTeam)?.id ?? "");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function send(action: "confirm" | "correct") {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/v1/admin/complaints/${id}/assignment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, team: action === "correct" ? other : undefined, note }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setBusy(false);
+    if (!res.ok) setError(data?.error ?? "Could not save.");
+    else router.refresh();
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm">
+        Suggested by <strong>{suggestedBy === "ai" ? "AI" : "keyword rules"}</strong>:{" "}
+        <strong>{suggestedLabel}</strong>
+      </p>
+      <p className="text-sm text-zinc-600">Why: {reason || "—"}</p>
+      <p className="text-xs text-zinc-500">
+        The citizen is told about the team only after you confirm or correct it here.
+      </p>
+      <button
+        disabled={busy}
+        onClick={() => send("confirm")}
+        className="rounded bg-teal-700 px-4 py-2 font-medium text-white disabled:opacity-60"
+      >
+        {busy ? "Saving…" : "Confirm this team and notify citizen"}
+      </button>
+      <div className="border-t border-zinc-200 pt-3">
+        <p className="text-sm text-zinc-600">Wrong team? Pick the right one:</p>
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <select
+            value={other}
+            onChange={(e) => setOther(e.target.value)}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm"
+            aria-label="Correct team"
+          >
+            {teams
+              .filter((t) => t.id !== suggestedTeam)
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+          </select>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={500}
+            placeholder="Why? (internal note)"
+            className="min-w-48 flex-1 rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button
+            disabled={busy}
+            onClick={() => send("correct")}
+            className="rounded border border-teal-700 px-3 py-2 text-teal-800 disabled:opacity-60"
+          >
+            Correct team and notify citizen
+          </button>
+        </div>
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function QueueForm({ id, current, queues }: { id: string; current: string; queues: string[] }) {
   const router = useRouter();
   const [queue, setQueue] = useState(current);

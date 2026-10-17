@@ -27,6 +27,18 @@ export interface HistoryEntry {
 
 export type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
+/** Which team handles the complaint, and whether a staff member has verified the AI suggestion. */
+export interface Assignment {
+  suggestedTeam: string; // TeamId suggested by AI or by rules
+  suggestedBy: "ai" | "rules";
+  reason: string;
+  state: "PENDING_VERIFICATION" | "CONFIRMED" | "CORRECTED";
+  finalTeam: string | null; // set once a person verifies
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  correctionNote: string | null;
+}
+
 export interface Complaint {
   id: string;
   ticketId: string; // human-readable, guessable: never an authorization secret
@@ -37,7 +49,8 @@ export interface Complaint {
   caption: string;
   category: Category;
   title: string;
-  queue: string; // internal demo queue, not a government system
+  queue: string; // label of the current (suggested or confirmed) demo team
+  assignment?: Assignment; // missing on complaints created before this existed
   summary: string; // plain-English summary (AI-suggested or built from the caption)
   severity: Severity; // suggestion only
   hazards: string[];

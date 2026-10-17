@@ -52,8 +52,12 @@ async function Tracker({ params }: { params: Promise<{ token: string }> }) {
           <dd>{CATEGORY_LABEL[c.category]}</dd>
         </div>
         <div>
-          <dt className="text-zinc-500">Queue</dt>
-          <dd>{c.queue}</dd>
+          <dt className="text-zinc-500">Team</dt>
+          <dd>
+            {c.assignment?.state === "PENDING_VERIFICATION" || (!c.assignment && c.status === "TRIAGED")
+              ? `${c.queue} (suggested, awaiting staff confirmation)`
+              : c.queue}
+          </dd>
         </div>
         {c.severity ? (
           <div>

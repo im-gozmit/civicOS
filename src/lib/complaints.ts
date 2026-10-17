@@ -1,7 +1,9 @@
 import { randomBytes, randomUUID } from "crypto";
 import { withStore } from "@/lib/localStore";
 import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
-import type { Category, Complaint, ComplaintStatus, HistoryEntry, Severity } from "@/lib/types";
+import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
+import type { TeamId } from "@/lib/teams";
+import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Severity } from "@/lib/types";
 
 // --- Triage (placeholder) ---------------------------------------------------------------------
 // Real multimodal AI triage plugs in here later. Until then this is a deterministic keyword guess
@@ -24,15 +26,6 @@ const TITLES: Record<Category, string> = {
   OTHER: "Civic issue reported",
 };
 
-const QUEUES: Record<Category, string> = {
-  ROAD_DAMAGE: "Roads & Public Works (demo queue)",
-  GARBAGE: "Sanitation (demo queue)",
-  DRAINAGE: "Drainage (demo queue)",
-  WATER_SUPPLY: "Water Supply (demo queue)",
-  STREET_LIGHT: "Electricity & Street Lights (demo queue)",
-  OTHER: "General Administration (demo queue)",
-};
-
 export const CATEGORY_LABEL: Record<Category, string> = {
   ROAD_DAMAGE: "Road damage",
   GARBAGE: "Garbage",
@@ -49,15 +42,18 @@ export interface Analysis {
   summary: string;
   severity: Severity;
   hazards: string[];
-  queue: string;
+  suggestedTeam: TeamId;
+  teamReason: string;
+  teamSource: "ai" | "rules";
   needsHumanReview: boolean;
   reviewReason: string | null;
   aiProvider: string | null;
   aiModel: string | null;
 }
 
-export function queueFor(category: Category): string {
-  return QUEUES[category];
+/** Validated team for an AI suggestion; falls back to the category default if the AI chose none. */
+export function resolveTeam(category: Category, suggested: unknown): TeamId {
+  return isTeamId(suggested) ? suggested : DEFAULT_TEAM_FOR_CATEGORY[category];
 }
 
 /** Deterministic fallback when no AI provider returned a valid result. Always needs a human. */
@@ -70,7 +66,9 @@ export function fallbackAnalysis(caption: string): Analysis {
     summary: caption || "Citizen photo report (no description).",
     severity: "MEDIUM",
     hazards: [],
-    queue: QUEUES[category],
+    suggestedTeam: DEFAULT_TEAM_FOR_CATEGORY[category],
+    teamReason: "Chosen from keywords in the caption (no automatic analysis).",
+    teamSource: "rules",
     needsHumanReview: true,
     reviewReason: "Automatic analysis was unavailable.",
     aiProvider: null,
@@ -116,7 +114,17 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
       caption: input.caption,
       category: t.category,
       title: t.title,
-      queue: t.queue,
+      queue: TEAM_LABEL[t.suggestedTeam],
+      assignment: {
+        suggestedTeam: t.suggestedTeam,
+        suggestedBy: t.teamSource,
+        reason: t.teamReason,
+        state: "PENDING_VERIFICATION",
+        finalTeam: null,
+        verifiedBy: null,
+        verifiedAt: null,
+        correctionNote: null,
+      },
       summary: t.summary,
       severity: t.severity,
       hazards: t.hazards,
@@ -154,7 +162,7 @@ export function getOwnByTicket(senderKey: string, ticketId: string): Promise<Com
 
 // --- Admin operations -------------------------------------------------------------------------
 
-export const ALL_QUEUES = Array.from(new Set(Object.values(QUEUES)));
+export const ALL_QUEUES = TEAM_IDS.map((id) => TEAM_LABEL[id]);
 
 export function listAll(): Promise<Complaint[]> {
   return withStore((s) => [...s.complaints].reverse());
@@ -184,6 +192,9 @@ export function changeStatus(
     if (!c) return { ok: false as const, error: "Complaint not found." };
     if (!canTransition(c.status, to)) {
       return { ok: false as const, error: `Cannot move from ${c.status} to ${to}.` };
+    }
+    if (to === "ASSIGNED" && from_isPendingAssignment(c)) {
+      return { ok: false as const, error: "Verify the suggested team first (use Confirm or Correct team)." };
     }
     if (NEEDS_REASON.includes(to) && !publicNote.trim() && !internalNote.trim()) {
       return { ok: false as const, error: `A reason is required for ${to}.` };
@@ -224,10 +235,123 @@ export function assignQueue(id: string, queue: string, adminLabel: string): Prom
     const c = store.complaints.find((x) => x.id === id);
     if (!c) return { ok: false as const, error: "Complaint not found." };
     if (!ALL_QUEUES.includes(queue)) return { ok: false as const, error: "Unknown queue." };
+    if (from_isPendingAssignment(c)) return { ok: false as const, error: "Verify the suggested team first." };
     c.queue = queue;
+    if (c.assignment) c.assignment.finalTeam = teamIdFromLabel(queue);
     const now = new Date().toISOString();
     c.history.push({ status: c.status, note: `Moved to ${queue}.`, actor: "admin", at: now });
     c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: `Queue set to ${queue}` }];
     return { ok: true as const, complaint: structuredClone(c), notificationId: "" };
+  });
+}
+
+// --- Team verification ------------------------------------------------------------------------
+
+/** Legacy complaints (before assignments existed) are treated as pending while still TRIAGED. */
+export function assignmentOf(c: Complaint): Assignment {
+  if (c.assignment) return c.assignment;
+  const team = teamIdFromLabel(c.queue);
+  return {
+    suggestedTeam: team,
+    suggestedBy: "rules",
+    reason: "Created before team suggestions existed.",
+    state: c.status === "TRIAGED" ? "PENDING_VERIFICATION" : "CONFIRMED",
+    finalTeam: c.status === "TRIAGED" ? null : team,
+    verifiedBy: null,
+    verifiedAt: null,
+    correctionNote: null,
+  };
+}
+
+function from_isPendingAssignment(c: Complaint): boolean {
+  return c.status === "TRIAGED" && assignmentOf(c).state === "PENDING_VERIFICATION";
+}
+
+export type VerifyResult = { ok: true; complaint: Complaint; notificationId: string } | { ok: false; error: string };
+
+/**
+ * A staff member confirms the suggested team, or corrects it. Only now does the complaint become
+ * ASSIGNED and only now is the citizen told which team has it. One transaction: assignment,
+ * status, history and the notification-outbox row are saved together.
+ */
+export function verifyAssignment(
+  id: string,
+  action: "confirm" | "correct",
+  team: string | undefined,
+  note: string,
+  adminLabel: string,
+  trackUrl: (c: Complaint) => string,
+): Promise<VerifyResult> {
+  return withStore((store) => {
+    const c = store.complaints.find((x) => x.id === id);
+    if (!c) return { ok: false as const, error: "Complaint not found." };
+    if (!from_isPendingAssignment(c)) return { ok: false as const, error: "This complaint is not waiting for team verification." };
+
+    const current = assignmentOf(c);
+    let finalTeam: TeamId = current.suggestedTeam as TeamId;
+    let state: Assignment["state"] = "CONFIRMED";
+    if (action === "correct") {
+      if (!isTeamId(team)) return { ok: false as const, error: "Choose a valid team." };
+      if (team === current.suggestedTeam) return { ok: false as const, error: "That is already the suggested team; use Confirm." };
+      finalTeam = team;
+      state = "CORRECTED";
+    }
+    const now = new Date().toISOString();
+    c.assignment = {
+      ...current,
+      state,
+      finalTeam,
+      verifiedBy: adminLabel,
+      verifiedAt: now,
+      correctionNote: state === "CORRECTED" ? note.trim() || null : null,
+    };
+    c.queue = TEAM_LABEL[finalTeam];
+    c.status = "ASSIGNED";
+    c.history.push({
+      status: "ASSIGNED",
+      note: `Reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.`,
+      actor: "admin",
+      at: now,
+    });
+    c.internalNotes = [
+      ...(c.internalNotes ?? []),
+      {
+        at: now,
+        by: adminLabel,
+        text:
+          state === "CONFIRMED"
+            ? `Confirmed suggested team ${TEAM_LABEL[finalTeam]}`
+            : `Corrected team from ${TEAM_LABEL[current.suggestedTeam as TeamId]} to ${TEAM_LABEL[finalTeam]}${note.trim() ? `: ${note.trim()}` : ""}`,
+      },
+    ];
+    const notificationId = randomUUID();
+    store.notifications.push({
+      id: notificationId,
+      complaintId: c.id,
+      text:
+        `📣 Update on ${c.ticketId}: your report has been reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.` +
+        `
+Track: ${trackUrl(c)}`,
+      state: "PENDING",
+      attempts: 0,
+      lastError: null,
+      createdAt: now,
+      sentAt: null,
+    });
+    return { ok: true as const, complaint: structuredClone(c), notificationId };
+  });
+}
+
+/** How often staff accepted the AI/rules team suggestion. Useful to judge how good it is. */
+export function assignmentStats(): Promise<{ pending: number; confirmed: number; corrected: number }> {
+  return withStore((s) => {
+    let pending = 0, confirmed = 0, corrected = 0;
+    for (const c of s.complaints) {
+      const st = assignmentOf(c).state;
+      if (st === "PENDING_VERIFICATION") pending++;
+      else if (st === "CONFIRMED") confirmed++;
+      else corrected++;
+    }
+    return { pending, confirmed, corrected };
   });
 }
