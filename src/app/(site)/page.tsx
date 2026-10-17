@@ -76,9 +76,11 @@ export default function Home() {
             </ul>
           </div>
 
-          <div className="grid items-end gap-6 sm:grid-cols-[1fr_0.8fr]">
+          <div className="relative mx-auto w-full max-w-[28rem] pb-4 md:pb-6">
             <AzadStatue />
-            <PhoneMock />
+            <div className="mt-10 md:absolute md:bottom-2 md:right-0 md:mt-0 md:w-[260px] md:origin-bottom-right md:scale-[0.68]">
+              <PhoneMock />
+            </div>
           </div>
         </div>
       </section>
@@ -214,7 +216,7 @@ export default function Home() {
 /** A pure-CSS phone showing the WhatsApp conversation, so visitors see what to expect. */
 function PhoneMock() {
   return (
-    <div className="relative mx-auto w-full max-w-[260px] rotate-2 animate-rise [animation-delay:120ms]" aria-hidden>
+    <div className="relative mx-auto w-full max-w-[260px] rotate-2 md:max-w-none animate-rise [animation-delay:120ms]" aria-hidden>
       <span className="absolute -left-6 top-10 z-10 -rotate-6 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
         Ticket in seconds
       </span>
