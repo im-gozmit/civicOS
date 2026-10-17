@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:import": "tsx scripts/import-local.ts"
+    "db:import": "tsx scripts/import-local.ts",
+    "db:check": "tsx scripts/check-hosted.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
