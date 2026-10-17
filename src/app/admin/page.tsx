@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdmin } from "@/lib/adminAuth";
-import { CATEGORY_LABEL, assignmentOf, assignmentStats, listAll } from "@/lib/complaints";
+import { CATEGORY_LABEL, assignmentOf, assignmentStats, listAll, needsDuplicateReview } from "@/lib/complaints";
 import { ALL_STATUSES, STATUS_LABEL } from "@/lib/transitions";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import type { Complaint, ComplaintStatus } from "@/lib/types";
@@ -106,6 +106,12 @@ async function Queue({ searchParams }: { searchParams: Promise<{ status?: string
                 </td>
                 <td className="px-3 py-2">
                   {CATEGORY_LABEL[c.category]}
+                  {needsDuplicateReview(c) ? (
+                    <span className="ml-2 rounded bg-indigo-100 px-1.5 py-0.5 text-xs text-indigo-900">possible duplicate</span>
+                  ) : null}
+                  {c.duplicateOf ? (
+                    <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-700">duplicate of {c.duplicateOf.ticketId}</span>
+                  ) : null}
                   {assignmentOf(c).state === "PENDING_VERIFICATION" ? (
                     <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-900">verify team</span>
                   ) : null}

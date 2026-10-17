@@ -48,7 +48,7 @@ describe("status transitions", () => {
   });
   it("has no way out of terminal states except reopening a closed one", () => {
     expect(TRANSITIONS.REJECTED).toEqual([]);
-    expect(TRANSITIONS.DUPLICATE).toEqual([]);
+    expect(TRANSITIONS.DUPLICATE).toEqual(["TRIAGED"]); // staff can undo a wrong link
     expect(TRANSITIONS.CLOSED).toEqual(["REOPENED"]);
   });
   it("requires a reason for reject, duplicate, needs-info and reopen", () => {
@@ -183,8 +183,8 @@ describe("complaints: team verification and notifications", () => {
     const c = await newComplaint();
     await verifyAssignment(c.id, "confirm", undefined, "", "admin", trackUrl);
     expect((await changeStatus(c.id, "CLOSED", "", "", "admin", trackUrl)).ok).toBe(false); // ASSIGNED -> CLOSED
-    const noReason = await changeStatus(c.id, "TRIAGED", "", "", "admin", trackUrl); // allowed move, fine
-    expect(noReason.ok).toBe(true);
+    expect((await changeStatus(c.id, "TRIAGED", "", "", "admin", trackUrl)).ok).toBe(false); // sending it back needs a reason
+    expect((await changeStatus(c.id, "TRIAGED", "Wrong team, re-checking", "", "admin", trackUrl)).ok).toBe(true);
     const rej = await changeStatus(c.id, "REJECTED", "", "", "admin", trackUrl);
     expect(rej.ok).toBe(false); // reason required
     const rej2 = await changeStatus(c.id, "REJECTED", "Not a civic issue", "", "admin", trackUrl);

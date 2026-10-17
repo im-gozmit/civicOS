@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+import { readFile } from "fs/promises";
 import path from "path";
 import { MEDIA_DIR } from "@/lib/localStore";
 import { createComplaint, fallbackAnalysis, resolveTeam } from "@/lib/complaints";
@@ -76,6 +78,10 @@ export async function processReport(input: ReportInput): Promise<ReportResult> {
     if (t) voice = { transcript: t.transcript, english: t.english, language: t.language, provider: t.provider };
   }
 
+  const mediaHashes = await Promise.all(
+    input.mediaFiles.map(async (f) => createHash("sha256").update(await readFile(path.join(MEDIA_DIR, f)).catch(() => Buffer.alloc(0))).digest("hex")),
+  );
+
   const outcome = await analyse(input, voice);
   if ("reject" in outcome) return { ok: false, code: outcome.reject, seen: outcome.seen };
   const complaint = await createComplaint(
@@ -89,6 +95,7 @@ export async function processReport(input: ReportInput): Promise<ReportResult> {
       mediaFiles: input.mediaFiles,
       audioFiles: input.audioFiles,
       voice,
+      mediaHashes,
     },
     outcome.analysis,
   );

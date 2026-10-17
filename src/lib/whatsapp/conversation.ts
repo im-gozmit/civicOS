@@ -58,6 +58,9 @@ function successMessage(c: Complaint) {
     `Severity (suggested): ${c.severity.charAt(0) + c.severity.slice(1).toLowerCase()}\n` +
     `Summary: ${c.summary}\n` +
     (c.voice ? `Voice note (as we understood it): ${c.voice.english}\n` : "") +
+    ((c.duplicateCandidates?.length ?? 0) > 0
+      ? `ℹ️ A similar problem was already reported nearby. Your report is registered separately and staff will link them if it is the same.\n`
+      : "") +
     `Status: received, awaiting staff review\n` +
     (c.needsHumanReview
       ? `Note: ${c.aiProvider ? "the automatic analysis is only a suggestion and" : "automatic analysis was unavailable, so"} a person will review this report.\n`

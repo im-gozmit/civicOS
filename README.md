@@ -22,8 +22,10 @@ The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 | Before/after repair photo check (advisory) and closing rules | Working |
 | Tracking link `/t/<token>` and minimal public lookup `/track` | Working |
 | "Get updates on WhatsApp" for website reports (`TRACK <ticket> <token>`) | Working |
-| Automated tests (21) | Passing |
-| Database, public issue map, daily AI brief, duplicate linking, templates for updates after 24 h | Not built yet |
+| **Duplicate detection**: new reports are compared with open ones nearby (same type, close, recent, identical photo); staff link or dismiss, nothing is merged automatically | Working |
+| **Public issue map** `/map` with approximate positions and no private details | Working |
+| Automated tests (35) | Passing |
+| Database, daily AI brief, templates for updates after 24 h | Not built yet |
 
 ## How a report flows
 
@@ -49,7 +51,7 @@ cp .env.example .env.local   # then fill in the values (see below)
 npm run dev
 ```
 
-The app runs at http://localhost:3000. Pages: `/` home, `/report`, `/track`, `/admin`.
+The app runs at http://localhost:3000. Pages: `/` home, `/report`, `/track`, `/map`, `/admin`.
 
 ### Environment variables
 
@@ -108,6 +110,7 @@ src/
   lib/reportPipeline.ts           the one pipeline both channels use
   lib/complaints.ts               tickets, team verification, status changes, repair evidence
   lib/transitions.ts, teams.ts    allowed status moves; the fixed team list
+  lib/duplicates.ts, publicMap.ts duplicate matching; what the public map may show
   lib/ai/                         triage, transcribe, verifyRepair (Gemini/OpenAI + validation)
   lib/whatsapp/                   signature check, Cloud API client, media, conversation state machine
   lib/notifications.ts            outbox with retries; failures never undo a status change
@@ -122,15 +125,16 @@ PROJECT_SPEC.md                   full product and engineering spec
 - Reporter phone numbers are stored **in plain text in a local file** during this prototype. Encrypt them before any real use.
 - Raw webhook events (which contain phone numbers) are logged to `.data/wa-events.jsonl`. `.data/` is git-ignored; do not share it.
 - Tracking links use an unguessable token. The public ticket lookup reveals only category, status and last-updated time.
+- The public map shows approximate positions (rounded and offset by roughly 100 m), the type of problem, a status label and the day of the report. No photos, text, ticket or tracking numbers, or contact details. Duplicate and rejected reports are hidden.
 - Photos and voice notes are private: only a signed-in admin can open them.
 - AI output is a suggestion. Staff verify the team and decide on closure; internal notes are never shown to citizens.
 - Departments shown to citizens are labelled demo queues. CivicOS does not claim a government department has received a complaint.
 
 ## Roadmap
 
-1. Supabase/Postgres with PostGIS, encrypted phone numbers, per-person admin accounts.
-2. Public issue map and duplicate linking.
-3. WhatsApp template messages for updates after 24 hours.
+1. Supabase/Postgres with PostGIS, encrypted phone numbers, per-person admin accounts, a permanent hosted address.
+2. WhatsApp template messages for updates after 24 hours.
+3. Citizen "is it fixed?" confirmation over WhatsApp.
 4. Daily AI brief for staff, richer analytics.
 
 See [PROJECT_SPEC.md](PROJECT_SPEC.md) for details.

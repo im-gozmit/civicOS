@@ -64,6 +64,10 @@ export interface Complaint {
   mediaFiles: string[]; // relative paths under .data/media
   audioFiles: string[];
   repairChecks?: RepairCheck[];
+  mediaHashes?: string[]; // sha256 of each photo, used to spot the very same picture sent twice
+  duplicateCandidates?: DuplicateCandidate[]; // set when the report was created
+  duplicateReviewed?: boolean; // staff looked at the candidates and decided
+  duplicateOf?: { id: string; ticketId: string; by: string; at: string; reason: string }; // staff-confirmed link
   voice?: { transcript: string; english: string; language: string; provider: string }; // from the voice note, if any
   createdAt: string;
   history: HistoryEntry[];
@@ -80,6 +84,16 @@ export interface RepairCheck {
   reason: string;
   aiProvider: string | null;
   aiModel: string | null;
+}
+
+/** An earlier complaint that looks like the same problem (a suggestion for staff, never automatic). */
+export interface DuplicateCandidate {
+  id: string;
+  ticketId: string;
+  distanceM: number;
+  score: number;
+  sameImage: boolean;
+  reason: string;
 }
 
 export interface PendingReport {

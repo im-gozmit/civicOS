@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAdmin } from "@/lib/adminAuth";
-import { ALL_QUEUES, CATEGORY_LABEL, assignmentOf, getById } from "@/lib/complaints";
+import { ALL_QUEUES, CATEGORY_LABEL, assignmentOf, getById, linkedReportsOf, needsDuplicateReview } from "@/lib/complaints";
 import { TEAM_IDS, TEAM_LABEL } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { withStore } from "@/lib/localStore";
-import { EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
+import { DuplicateCard, EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 
 export const metadata = { title: "Complaint — CivicOS admin" };
 
@@ -32,10 +32,25 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!c) notFound();
 
   const notifications = await withStore((s) => s.notifications.filter((n) => n.complaintId === id).slice(-5).reverse());
+  const linked = await linkedReportsOf(c.id);
+  const reviewDuplicates = needsDuplicateReview(c);
+  const candidates = reviewDuplicates
+    ? await withStore((s) =>
+        (c.duplicateCandidates ?? []).map((k) => ({
+          id: k.id,
+          ticketId: k.ticketId,
+          distanceM: k.distanceM,
+          reason: k.reason,
+          sameImage: k.sameImage,
+          status: STATUS_LABEL[s.complaints.find((x) => x.id === k.id)?.status ?? "REPORTED"],
+        })),
+      )
+    : [];
   const assignment = assignmentOf(c);
   const pendingTeam = assignment.state === "PENDING_VERIFICATION";
   const options = TRANSITIONS[c.status]
     .filter((s) => !(pendingTeam && s === "ASSIGNED")) // must go through team verification
+    .filter((s) => s !== "DUPLICATE") // linking goes through the duplicate review box
     .map((s) => ({
     value: s,
     label: STATUS_LABEL[s],
@@ -139,6 +154,32 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           </div>
         ) : null}
       </dl>
+
+      {c.duplicateOf ? (
+        <p className="rounded border border-sky-300 bg-sky-50 p-3 text-sm">
+          Linked as a duplicate of <strong className="font-mono">{c.duplicateOf.ticketId}</strong> by {c.duplicateOf.by}. {c.duplicateOf.reason} To
+          undo, change the status back to &ldquo;Registered, awaiting review&rdquo; with a reason.
+        </p>
+      ) : null}
+      {linked.length > 0 ? (
+        <p className="rounded border border-sky-300 bg-sky-50 p-3 text-sm">
+          {linked.length} other report{linked.length === 1 ? "" : "s"} of the same problem linked to this one:{" "}
+          {linked.map((l, i) => (
+            <span key={l.id}>
+              {i > 0 ? ", " : ""}
+              <a href={"/admin/c/" + l.id} className="font-mono text-teal-800 underline">
+                {l.ticketId}
+              </a>
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {reviewDuplicates ? (
+        <section className="space-y-3 rounded border-2 border-sky-400 bg-sky-50 p-4">
+          <h2 className="font-semibold">Possible duplicate: please check</h2>
+          <DuplicateCard id={c.id} candidates={candidates} />
+        </section>
+      ) : null}
 
       {pendingTeam ? (
         <section className="space-y-3 rounded border-2 border-amber-400 bg-amber-50 p-4">

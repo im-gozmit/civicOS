@@ -20,6 +20,9 @@ export default function Home() {
         <Link href="/track" className="block rounded border border-teal-700 px-4 py-4 text-center text-lg font-medium text-teal-800">
           Track a complaint
         </Link>
+        <Link href="/map" className="block rounded border border-teal-700 px-4 py-4 text-center text-lg font-medium text-teal-800">
+          See problems nearby
+        </Link>
         {bot ? (
           <a
             href={`https://wa.me/${bot}?text=${encodeURIComponent("Hi")}`}

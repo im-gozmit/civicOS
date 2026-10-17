@@ -248,3 +248,75 @@ export function EvidenceForm({ id }: { id: string }) {
     </form>
   );
 }
+
+export function DuplicateCard({
+  id,
+  candidates,
+}: {
+  id: string;
+  candidates: Array<{ id: string; ticketId: string; distanceM: number; reason: string; status: string; sameImage: boolean }>;
+}) {
+  const router = useRouter();
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function send(action: "link" | "dismiss", primaryTicketId?: string) {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/v1/admin/complaints/${id}/duplicate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, primaryTicketId, note }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setBusy(false);
+    if (!res.ok) setError(data?.error ?? "Could not save.");
+    else router.refresh();
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-zinc-600">
+        These earlier open reports look like the same problem. Nothing is merged automatically, and this citizen keeps
+        their own complaint number.
+      </p>
+      <ul className="space-y-2">
+        {candidates.map((c) => (
+          <li key={c.ticketId} className="rounded bg-white p-3 text-sm">
+            <p>
+              <a href={`/admin/c/${c.id}`} className="font-mono text-teal-800 underline">
+                {c.ticketId}
+              </a>{" "}
+              <span className="text-zinc-500">({c.status})</span>
+              {c.sameImage ? <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-900">identical photo</span> : null}
+            </p>
+            <p className="text-zinc-600">{c.reason}</p>
+            <button
+              disabled={busy}
+              onClick={() => send("link", c.ticketId)}
+              className="mt-2 rounded border border-teal-700 px-3 py-1.5 text-teal-800 disabled:opacity-60"
+            >
+              Same problem: link as duplicate of {c.ticketId}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={500}
+        placeholder="Note (optional, internal)"
+        className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
+      />
+      <button disabled={busy} onClick={() => send("dismiss")} className="rounded border border-zinc-400 px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-60">
+        Not the same problem
+      </button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "crypto";
 import { withStore } from "@/lib/localStore";
 import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
+import { findDuplicateCandidates } from "@/lib/duplicates";
 import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
 import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, RepairCheck, Severity } from "@/lib/types";
@@ -88,12 +89,17 @@ export interface NewComplaintInput {
   mediaFiles: string[];
   audioFiles: string[];
   voice?: { transcript: string; english: string; language: string; provider: string };
+  mediaHashes?: string[];
 }
 
 export async function createComplaint(input: NewComplaintInput, t: Analysis): Promise<Complaint> {
   const now = new Date().toISOString();
   return withStore((store) => {
     store.counter += 1;
+    const candidates = findDuplicateCandidates(
+      { latitude: input.latitude, longitude: input.longitude, category: t.category, mediaHashes: input.mediaHashes ?? [] },
+      store.complaints,
+    );
     const history: HistoryEntry[] = [
       { status: "REPORTED", note: `Report received via ${input.source}.`, actor: "citizen", at: now },
       {
@@ -139,6 +145,8 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
       mediaFiles: input.mediaFiles,
       audioFiles: input.audioFiles,
       voice: input.voice,
+      mediaHashes: input.mediaHashes,
+      duplicateCandidates: candidates,
       createdAt: now,
       history,
     };
@@ -195,6 +203,9 @@ export function changeStatus(
     if (!canTransition(c.status, to)) {
       return { ok: false as const, error: `Cannot move from ${c.status} to ${to}.` };
     }
+    if (to === "DUPLICATE") {
+      return { ok: false as const, error: "Use the duplicate review box to link this to the earlier report." };
+    }
     if (to === "ASSIGNED" && from_isPendingAssignment(c)) {
       return { ok: false as const, error: "Verify the suggested team first (use Confirm or Correct team)." };
     }
@@ -210,6 +221,10 @@ export function changeStatus(
     }
     const now = new Date().toISOString();
     const from = c.status;
+    if (from === "DUPLICATE" && to === "TRIAGED") {
+      c.duplicateOf = undefined; // staff undid a wrong link
+      c.duplicateReviewed = true;
+    }
     c.status = to;
     c.history.push({
       status: to,
@@ -357,7 +372,9 @@ export function assignmentStats(): Promise<{ pending: number; confirmed: number;
     let pending = 0, confirmed = 0, corrected = 0;
     for (const c of s.complaints) {
       const st = assignmentOf(c).state;
-      if (st === "PENDING_VERIFICATION") pending++;
+      if (st === "PENDING_VERIFICATION") {
+        if (c.status === "TRIAGED") pending++;
+      }
       else if (st === "CONFIRMED") confirmed++;
       else corrected++;
     }
@@ -405,4 +422,70 @@ export function addRepairCheck(id: string, check: RepairCheck): Promise<boolean>
     ];
     return true;
   });
+}
+
+// --- Duplicate review -------------------------------------------------------------------------
+
+export type DuplicateResult = { ok: true; complaint: Complaint; notificationId: string | null } | { ok: false; error: string };
+
+/** Staff say "this is the same problem as <primary>". The report is kept, just linked. */
+export function linkDuplicate(
+  id: string,
+  primaryTicketId: string,
+  note: string,
+  adminLabel: string,
+  trackUrl: (c: Complaint) => string,
+): Promise<DuplicateResult> {
+  return withStore((store) => {
+    const c = store.complaints.find((x) => x.id === id);
+    if (!c) return { ok: false as const, error: "Complaint not found." };
+    if (!canTransition(c.status, "DUPLICATE")) return { ok: false as const, error: "This complaint can no longer be marked as a duplicate." };
+    const primary = store.complaints.find((x) => x.ticketId.toLowerCase() === primaryTicketId.toLowerCase());
+    if (!primary) return { ok: false as const, error: "Earlier report not found." };
+    if (primary.id === c.id) return { ok: false as const, error: "A report cannot be a duplicate of itself." };
+    if (primary.status === "DUPLICATE" || primary.duplicateOf) return { ok: false as const, error: "Link to the main report, not to another duplicate." };
+    if (primary.status === "REJECTED") return { ok: false as const, error: "Cannot link to a rejected report." };
+
+    const now = new Date().toISOString();
+    c.status = "DUPLICATE";
+    c.duplicateReviewed = true;
+    c.duplicateOf = { id: primary.id, ticketId: primary.ticketId, by: adminLabel, at: now, reason: note.trim() || "Same problem at the same spot." };
+    c.history.push({ status: "DUPLICATE", note: "Linked to an earlier report of the same problem.", actor: "admin", at: now });
+    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: "Marked as duplicate of " + primary.ticketId + (note.trim() ? ": " + note.trim() : "") }];
+    primary.internalNotes = [...(primary.internalNotes ?? []), { at: now, by: adminLabel, text: c.ticketId + " was linked to this report as a duplicate" }];
+
+    const notificationId = randomUUID();
+    store.notifications.push({
+      id: notificationId,
+      complaintId: c.id,
+      text: "📣 Update on " + c.ticketId + ": it is the same problem as an earlier report, so staff linked them and will handle it together. Your complaint stays on record.\nTrack: " + trackUrl(c),
+      state: "PENDING",
+      attempts: 0,
+      lastError: null,
+      createdAt: now,
+      sentAt: null,
+    });
+    return { ok: true as const, complaint: structuredClone(c), notificationId };
+  });
+}
+
+/** Staff looked at the suggested matches and decided they are different problems. */
+export function dismissDuplicates(id: string, adminLabel: string): Promise<boolean> {
+  return withStore((store) => {
+    const c = store.complaints.find((x) => x.id === id);
+    if (!c) return false;
+    c.duplicateReviewed = true;
+    const now = new Date().toISOString();
+    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: "Reviewed possible duplicates: not the same problem" }];
+    return true;
+  });
+}
+
+/** Reports that staff linked to this one. */
+export function linkedReportsOf(id: string): Promise<Array<{ id: string; ticketId: string }>> {
+  return withStore((s) => s.complaints.filter((x) => x.duplicateOf?.id === id).map((x) => ({ id: x.id, ticketId: x.ticketId })));
+}
+
+export function needsDuplicateReview(c: Complaint): boolean {
+  return !c.duplicateReviewed && (c.duplicateCandidates?.length ?? 0) > 0 && ["REPORTED", "TRIAGED", "NEEDS_INFO"].includes(c.status);
 }

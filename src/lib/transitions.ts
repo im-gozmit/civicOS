@@ -10,12 +10,12 @@ export const TRANSITIONS: Record<ComplaintStatus, ComplaintStatus[]> = {
   RESOLVED_PENDING_VERIFICATION: ["CLOSED", "REOPENED"],
   CLOSED: ["REOPENED"],
   REOPENED: ["ASSIGNED", "IN_PROGRESS"],
-  DUPLICATE: [],
+  DUPLICATE: ["TRIAGED"], // undo a wrong link (a reason is required)
   REJECTED: [],
 };
 
 /** These need a written reason so the history is auditable. */
-export const NEEDS_REASON: ComplaintStatus[] = ["REJECTED", "DUPLICATE", "NEEDS_INFO", "REOPENED"];
+export const NEEDS_REASON: ComplaintStatus[] = ["REJECTED", "DUPLICATE", "NEEDS_INFO", "REOPENED", "TRIAGED"];
 
 export const ALL_STATUSES = Object.keys(TRANSITIONS) as ComplaintStatus[];
 
