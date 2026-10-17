@@ -319,25 +319,6 @@ html[data-view="classic"] .site-header .header-wa {
   mix-blend-mode: multiply;
 }
 
-/* The 60-second bar on the home page fills once every few seconds, like a timer running. */
-@keyframes sixty {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-.sixty-fill {
-  animation: sixty 6s cubic-bezier(.4, 0, .2, 1) infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sixty-fill {
-    animation: none;
-    width: 100%;
-  }
-}
-
 /* The three steps in the hero card light up in turn, like a message moving along. */
 @keyframes wastep {
   0%, 30%, 100% {

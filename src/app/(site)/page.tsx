@@ -20,7 +20,7 @@ import {
   UserCheck,
   Waves,
 } from "lucide-react";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Copy, Eye, FileText, Gauge, Mic, Route, ShieldAlert } from "lucide-react";
 import { IssueMap } from "@/components/public/IssueMap";
 import { BuildathonBanner } from "@/components/public/Prayagraj";
 import { AzadStatue } from "@/components/public/AzadStatue";
@@ -220,49 +220,38 @@ export default function Home() {
             </li>
           ))}
         </ol>
+      </section>
 
-        {/* The 60-second promise */}
-        <div className="mt-8 overflow-hidden rounded-2xl border-2 border-slate-900 bg-slate-900 p-6 text-white shadow-[8px_8px_0_0_rgb(207_61_15/0.9)] sm:p-10">
-          <div className="grid items-center gap-8 lg:grid-cols-[auto_1fr_auto]">
-            <div className="flex items-end gap-3">
-              <span className="font-display text-8xl font-black leading-none text-orange-400 sm:text-9xl">60</span>
-              <span className="pb-3 font-mono text-sm font-bold uppercase leading-tight tracking-widest text-white/80">seconds<br />on WhatsApp</span>
-            </div>
-            <div>
-              <h3 className="text-2xl font-black leading-tight sm:text-3xl">From &ldquo;Hi&rdquo; to a complaint number, before you finish your chai.</h3>
-              <ol className="mt-5 grid gap-3 sm:grid-cols-4">
-                {[
-                  { t: "0:05", label: "Say Hi", Icon: MessageCircle },
-                  { t: "0:20", label: "Send a photo", Icon: Camera },
-                  { t: "0:40", label: "Share your location pin", Icon: MapPin },
-                  { t: "0:60", label: "Get your number and link", Icon: Send },
-                ].map(({ t, label, Icon }) => (
-                  <li key={label} className="rounded-lg border border-white/15 bg-white/5 p-3">
-                    <span className="font-mono text-xs font-bold text-orange-300">{t}</span>
-                    <span className="mt-1 flex items-center gap-2 text-sm font-semibold">
-                      <Icon className="h-4 w-4 shrink-0 text-orange-300" /> {label}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden>
-                <div className="sixty-fill h-full rounded-full bg-gradient-to-r from-amber-300 via-orange-500 to-teal-600" />
+      {/* ---------- The agent workforce ---------- */}
+      <section id="agents" className="container-page scroll-mt-24 py-12" aria-labelledby="agents-title">
+        <p className="eyebrow">Sudhaar</p>
+        <h2 id="agents-title" className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] text-slate-900 sm:text-5xl">
+          Not one prompt. <span className="italic text-teal-600">A coordinated agent workforce.</span>
+        </h2>
+        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600">
+          Each agent owns one civic job, explains what it saw, and can be upgraded on its own. They only suggest. A person always decides.
+        </p>
+
+        <ul className="mt-10 grid overflow-hidden rounded-xl border-2 border-slate-900 bg-slate-900 shadow-[6px_6px_0_0_var(--ink)] sm:grid-cols-2 lg:grid-cols-4 [&>li]:border-slate-900 gap-0.5">
+          {[
+            { Icon: Eye, name: "Vision Agent", text: "Understands the problem from a single photo and rejects pictures that are not civic issues." },
+            { Icon: Mic, name: "Speech Agent", text: "Transcribes voice notes in Hindi and English, and translates them for staff." },
+            { Icon: Gauge, name: "Severity Agent", text: "Rates urgency from low to critical, with the reason in plain words." },
+            { Icon: Route, name: "Routing Agent", text: "Suggests which team should handle it. Staff confirm before you are told." },
+            { Icon: Copy, name: "Duplicate Agent", text: "Spots repeat reports of the same problem so staff can link them." },
+            { Icon: FileText, name: "Summary Agent", text: "Writes a short, clear summary and notes hazards, so staff read one line, not a story." },
+            { Icon: ShieldAlert, name: "Safety Agent", text: "Treats captions and photo text as data, never as instructions, and flags anything doubtful." },
+            { Icon: BadgeCheck, name: "Verification Agent", text: "Gives an opinion on whether the after-repair photo shows a fix. Staff decide." },
+          ].map(({ Icon, name, text }) => (
+            <li key={name} className="group relative bg-[var(--paper)] p-5 transition duration-300 hover:bg-teal-50">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-mono text-sm font-bold text-teal-700">{name}</p>
+                <Icon className="h-4 w-4 text-slate-400 transition duration-300 group-hover:scale-125 group-hover:text-teal-600" />
               </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {wa ? (
-                <a href={wa} className="btn btn-whatsapp px-6 py-3.5 text-base">
-                  <MessageCircle className="h-5 w-5" /> Start on WhatsApp
-                </a>
-              ) : (
-                <Link href="/report" className="btn btn-primary px-6 py-3.5 text-base">
-                  <Camera className="h-5 w-5" /> Report a problem
-                </Link>
-              )}
-              <p className="text-center text-xs text-white/60">No app. No sign-up. Hindi or English.</p>
-            </div>
-          </div>
-        </div>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{text}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* ---------- What you can report ---------- */}
