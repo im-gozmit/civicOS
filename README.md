@@ -117,6 +117,7 @@ npm test                    # run the automated tests (they use a temporary data
 npm run db:migrate          # create tables and the photo bucket in the hosted database
 npm run db:check            # check the database and photo storage .env.local points at
 npm run db:import           # copy old local test complaints into the current database
+npm run db:seed-demo         # fill the LOCAL database with demo complaints (refuses if DATABASE_URL is set)
 npm run lint                # ESLint
 npx tsc --noEmit            # type-check
 node scripts/try-triage.ts <photo.jpg> "caption"        # AI triage on one photo

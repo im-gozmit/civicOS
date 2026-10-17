@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { rateClear, rateCount, rateRecord } from "@/lib/rateLimit";
 
 // Admin access for the prototype: ONE admin account whose credentials live in environment
@@ -61,6 +62,7 @@ export function verifySessionToken(token: string | undefined): { email: string }
 /** Reads the admin session from the request cookies (works in pages and route handlers). */
 export async function getAdmin(): Promise<{ email: string } | null> {
   if (!adminConfigured()) return null;
+  await connection(); // the session check reads the clock, so it must run per request
   const store = await cookies();
   return verifySessionToken(store.get(ADMIN_COOKIE)?.value);
 }

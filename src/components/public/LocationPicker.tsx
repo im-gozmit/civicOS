@@ -70,5 +70,5 @@ export function LocationPicker({
     if (flyTo && map.current) map.current.setView([flyTo.lat, flyTo.lng], 17);
   }, [flyTo]);
 
-  return <div ref={el} className="h-64 w-full rounded border border-zinc-300" role="application" aria-label="Map: tap to mark the problem location" />;
+  return <div ref={el} className="h-72 w-full sm:h-80" role="application" aria-label="Map: tap to mark the problem location" />;
 }

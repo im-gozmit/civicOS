@@ -11,11 +11,13 @@
     "test:watch": "vitest",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:import": "tsx scripts/import-local.ts",
-    "db:check": "tsx scripts/check-hosted.ts"
+    "db:check": "tsx scripts/check-hosted.ts",
+    "db:seed-demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.59.0",
     "next": "16.4.2",
     "postgres": "^3.4.9",
     "react": "19.3.0",

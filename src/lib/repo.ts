@@ -104,6 +104,18 @@ export class Repo {
     return rows.length > 0;
   }
 
+  /** Totals for the public home page: counts only, never any detail about a report. */
+  async publicCounts(): Promise<{ received: number; working: number; fixed: number }> {
+    const rows = await this.tx.query<{ received: string | number; working: string | number; fixed: string | number }>(
+      `select
+         count(*) filter (where status not in ('REJECTED', 'DUPLICATE')) as received,
+         count(*) filter (where status in ('ASSIGNED', 'IN_PROGRESS', 'RESOLVED_PENDING_VERIFICATION', 'REOPENED')) as working,
+         count(*) filter (where status = 'CLOSED') as fixed
+       from complaints`,
+    );
+    return { received: Number(rows[0].received), working: Number(rows[0].working), fixed: Number(rows[0].fixed) };
+  }
+
   async nextTicketNo(): Promise<number> {
     const rows = await this.tx.query<{ n: string | number }>("select nextval('ticket_seq') as n");
     return Number(rows[0].n);

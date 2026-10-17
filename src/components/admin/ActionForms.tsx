@@ -2,7 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircle, ArrowRightLeft, Check, CheckCircle2, Copy, ImagePlus, Loader2, Send, Sparkles, Upload } from "lucide-react";
 import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
+
+function ErrorLine({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {message}
+    </p>
+  );
+}
+
+function Spin({ on }: { on: boolean }) {
+  return on ? <Loader2 className="h-4 w-4 animate-spin" /> : null;
+}
+
+/* ------------------------------------------------------------------ status */
 
 interface StatusOption {
   value: string;
@@ -18,7 +34,7 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (options.length === 0) return <p className="text-sm text-zinc-500">No further status changes are allowed from here.</p>;
+  if (options.length === 0) return <p className="text-sm text-slate-500">No further status changes are allowed from here.</p>;
   // The list of allowed moves changes after every update. If the remembered choice is no longer
   // offered, fall back to the first option, so what the dropdown shows is what gets sent.
   const effective = options.some((o) => o.value === status) ? status : options[0].value;
@@ -45,30 +61,43 @@ export function StatusForm({ id, options }: { id: string; options: StatusOption[
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm">
-        <span className="text-zinc-600">Move to</span>
-        <select value={effective} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded border border-zinc-300 px-3 py-2">
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <label htmlFor="move-to" className="label">
+          Move to
+        </label>
+        <select id="move-to" value={effective} onChange={(e) => setStatus(e.target.value)} className="field">
           {options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
-      </label>
-      <label className="block text-sm">
-        <span className="text-zinc-600">Message to the citizen {needsReason ? "(a reason is required)" : "(optional)"}</span>
-        <textarea value={publicNote} onChange={(e) => setPublicNote(e.target.value)} rows={2} maxLength={500} className="mt-1 w-full rounded border border-zinc-300 px-3 py-2" />
-      </label>
-      <label className="block text-sm">
-        <span className="text-zinc-600">Internal note (never shown to the citizen)</span>
-        <textarea value={internalNote} onChange={(e) => setInternalNote(e.target.value)} rows={2} maxLength={1000} className="mt-1 w-full rounded border border-zinc-300 px-3 py-2" />
-      </label>
-      {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
-      <button disabled={busy} className="rounded bg-teal-700 px-4 py-2 font-medium text-white disabled:opacity-60">
+      </div>
+      <div>
+        <label htmlFor="public-note" className="label">
+          Message to the citizen{" "}
+          <span className={`font-normal ${needsReason ? "text-rose-600" : "text-slate-400"}`}>{needsReason ? "(a reason is required)" : "(optional)"}</span>
+        </label>
+        <textarea id="public-note" value={publicNote} onChange={(e) => setPublicNote(e.target.value)} rows={2} maxLength={500} className="field resize-y" />
+      </div>
+      <div>
+        <label htmlFor="internal-note" className="label">
+          Internal note <span className="font-normal text-slate-400">(never shown to the citizen)</span>
+        </label>
+        <textarea id="internal-note" value={internalNote} onChange={(e) => setInternalNote(e.target.value)} rows={2} maxLength={1000} className="field resize-y" />
+      </div>
+      <ErrorLine message={error} />
+      <button disabled={busy} className="btn btn-primary w-full">
+        <Spin on={busy} />
+        {!busy ? <Send className="h-4 w-4" /> : null}
         {busy ? "Saving…" : "Update status and notify citizen"}
       </button>
     </form>
   );
 }
+
+/* ------------------------------------------------------------ team verification */
 
 export function VerifyTeamCard({
   id,
@@ -106,63 +135,44 @@ export function VerifyTeamCard({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm">
-        Suggested by <strong>{suggestedBy === "ai" ? "AI" : "keyword rules"}</strong>:{" "}
-        <strong>{suggestedLabel}</strong>
-      </p>
-      <p className="text-sm text-zinc-600">Why: {reason || "—"}</p>
-      <p className="text-xs text-zinc-500">
-        The citizen is told about the team only after you confirm or correct it here.
-      </p>
-      <button
-        disabled={busy}
-        onClick={() => send("confirm")}
-        className="rounded bg-teal-700 px-4 py-2 font-medium text-white disabled:opacity-60"
-      >
+    <div className="space-y-4">
+      <div className="rounded-xl bg-white p-4 ring-1 ring-amber-200">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <Sparkles className="h-3.5 w-3.5" /> Suggested by {suggestedBy === "ai" ? "AI" : "keyword rules"}
+        </p>
+        <p className="mt-1 text-lg font-bold text-slate-900">{suggestedLabel}</p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-600">{reason || "No reason given."}</p>
+      </div>
+      <p className="text-xs text-slate-500">The citizen is told about the team only after you confirm or correct it here.</p>
+
+      <button disabled={busy} onClick={() => send("confirm")} className="btn btn-primary w-full">
+        <Spin on={busy} />
+        {!busy ? <CheckCircle2 className="h-4 w-4" /> : null}
         {busy ? "Saving…" : "Confirm this team and notify citizen"}
       </button>
-      <div className="border-t border-zinc-200 pt-3">
-        <p className="text-sm text-zinc-600">Wrong team? Pick the right one:</p>
-        <div className="mt-2 flex flex-wrap items-end gap-2">
-          <select
-            value={other}
-            onChange={(e) => setOther(e.target.value)}
-            className="rounded border border-zinc-300 px-3 py-2 text-sm"
-            aria-label="Correct team"
-          >
-            {teams
-              .filter((t) => t.id !== suggestedTeam)
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-          </select>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={500}
-            placeholder="Why? (internal note)"
-            className="min-w-48 flex-1 rounded border border-zinc-300 px-3 py-2 text-sm"
-          />
-          <button
-            disabled={busy}
-            onClick={() => send("correct")}
-            className="rounded border border-teal-700 px-3 py-2 text-teal-800 disabled:opacity-60"
-          >
-            Correct team and notify citizen
-          </button>
-        </div>
+
+      <div className="border-t border-amber-200/70 pt-4">
+        <p className="label">Wrong team? Choose the right one</p>
+        <select value={other} onChange={(e) => setOther(e.target.value)} className="field" aria-label="Correct team">
+          {teams
+            .filter((t) => t.id !== suggestedTeam)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+        </select>
+        <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Why? (internal note)" className="field mt-2" />
+        <button disabled={busy} onClick={() => send("correct")} className="btn btn-secondary mt-3 w-full">
+          <ArrowRightLeft className="h-4 w-4" /> Correct team and notify citizen
+        </button>
       </div>
-      {error ? (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <ErrorLine message={error} />
     </div>
   );
 }
+
+/* ------------------------------------------------------------------- reassign */
 
 export function QueueForm({ id, current, queues }: { id: string; current: string; queues: string[] }) {
   const router = useRouter();
@@ -186,22 +196,29 @@ export function QueueForm({ id, current, queues }: { id: string; current: string
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-      <label className="block text-sm">
-        <span className="text-zinc-600">Assign to queue (demo)</span>
-        <select value={queue} onChange={(e) => setQueue(e.target.value)} className="mt-1 block rounded border border-zinc-300 px-3 py-2">
+    <form onSubmit={submit} className="space-y-3">
+      <div>
+        <label htmlFor="queue" className="label">
+          Move to another team (demo)
+        </label>
+        <select id="queue" value={queue} onChange={(e) => setQueue(e.target.value)} className="field">
           {queues.map((q) => (
-            <option key={q} value={q}>{q}</option>
+            <option key={q} value={q}>
+              {q}
+            </option>
           ))}
         </select>
-      </label>
-      <button disabled={busy || queue === current} className="rounded border border-teal-700 px-3 py-2 text-teal-800 disabled:opacity-50">
-        {busy ? "Saving…" : "Assign"}
+      </div>
+      <button disabled={busy || queue === current} className="btn btn-secondary w-full">
+        <Spin on={busy} />
+        {busy ? "Saving…" : "Reassign"}
       </button>
-      {error ? <p role="alert" className="w-full text-sm text-red-700">{error}</p> : null}
+      <ErrorLine message={error} />
     </form>
   );
 }
+
+/* -------------------------------------------------------------- repair evidence */
 
 export function EvidenceForm({ id }: { id: string }) {
   const router = useRouter();
@@ -248,46 +265,56 @@ export function EvidenceForm({ id }: { id: string }) {
   const sizeText = file ? (file.size >= 1024 * 1024 ? (file.size / 1024 / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(file.size / 1024)) + " KB") : "";
 
   return (
-    <form onSubmit={submit} className="space-y-2">
-      <p className="text-sm text-zinc-600">Photo taken after the repair</p>
-      <input
-        key={inputKey}
-        id={`evidence-${id}`}
-        type="file"
-        accept="image/*"
-        onChange={(e) => {
-          setError(null);
-          setDone(null);
-          setFile(e.target.files?.[0] ?? null);
-        }}
-        className="block w-full text-sm"
-      />
-      {file ? (
-        <p className="text-sm text-teal-800">
-          Selected: <strong>{file.name}</strong> ({sizeText}). Now press the button below.
-        </p>
-      ) : (
-        <p className="text-sm text-zinc-500">Choose a photo first. The button below turns on once a photo is selected.</p>
-      )}
-      {error ? (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-      {done ? (
-        <p role="status" className="text-sm text-teal-800">
-          {done}
-        </p>
-      ) : null}
-      <button
-        disabled={!file || busy}
-        className="rounded border border-teal-700 bg-teal-700 px-3 py-2 font-medium text-white disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+    <form onSubmit={submit} className="space-y-3">
+      <label
+        htmlFor={`evidence-${id}`}
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition ${
+          file ? "border-teal-400 bg-teal-50/60" : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+        }`}
       >
-        {busy ? "Comparing with the original photo (about 10 seconds)…" : "Upload and compare"}
+        <span className={`flex h-11 w-11 items-center justify-center rounded-full ${file ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+          {file ? <Check className="h-5 w-5" strokeWidth={3} /> : <ImagePlus className="h-5 w-5" />}
+        </span>
+        {file ? (
+          <span className="text-sm">
+            <strong className="block break-all text-teal-900">{file.name}</strong>
+            <span className="text-teal-800">{sizeText} selected. Press the button below.</span>
+          </span>
+        ) : (
+          <span className="text-sm">
+            <strong className="block text-slate-800">Choose the photo taken after the repair</strong>
+            <span className="text-slate-500">The button turns on once a photo is selected.</span>
+          </span>
+        )}
+        <input
+          key={inputKey}
+          id={`evidence-${id}`}
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            setError(null);
+            setDone(null);
+            setFile(e.target.files?.[0] ?? null);
+          }}
+          className="sr-only"
+        />
+      </label>
+      <ErrorLine message={error} />
+      {done ? (
+        <p role="status" className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-900">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {done}
+        </p>
+      ) : null}
+      <button disabled={!file || busy} className="btn btn-primary w-full">
+        <Spin on={busy} />
+        {!busy ? <Upload className="h-4 w-4" /> : null}
+        {busy ? "Comparing with the original (about 10 seconds)…" : "Upload and compare"}
       </button>
     </form>
   );
 }
+
+/* ----------------------------------------------------------- duplicate review */
 
 export function DuplicateCard({
   id,
@@ -317,46 +344,32 @@ export function DuplicateCard({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-zinc-600">
-        These earlier open reports look like the same problem. Nothing is merged automatically, and this citizen keeps
-        their own complaint number.
+      <p className="text-sm leading-relaxed text-slate-600">
+        These earlier open reports look like the same problem. Nothing is merged automatically, and this citizen keeps their own complaint
+        number.
       </p>
       <ul className="space-y-2">
         {candidates.map((c) => (
-          <li key={c.ticketId} className="rounded bg-white p-3 text-sm">
-            <p>
-              <a href={`/admin/c/${c.id}`} className="font-mono text-teal-800 underline">
+          <li key={c.ticketId} className="rounded-xl bg-white p-3.5 ring-1 ring-sky-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <a href={`/admin/c/${c.id}`} className="font-mono text-sm font-bold text-teal-800 underline decoration-teal-300 underline-offset-2">
                 {c.ticketId}
-              </a>{" "}
-              <span className="text-zinc-500">({c.status})</span>
-              {c.sameImage ? <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-900">identical photo</span> : null}
-            </p>
-            <p className="text-zinc-600">{c.reason}</p>
-            <button
-              disabled={busy}
-              onClick={() => send("link", c.ticketId)}
-              className="mt-2 rounded border border-teal-700 px-3 py-1.5 text-teal-800 disabled:opacity-60"
-            >
-              Same problem: link as duplicate of {c.ticketId}
+              </a>
+              <span className="text-xs text-slate-500">{c.status}</span>
+              {c.sameImage ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-inset ring-red-200">identical photo</span> : null}
+            </div>
+            <p className="mt-1 text-sm text-slate-600">{c.reason}</p>
+            <button disabled={busy} onClick={() => send("link", c.ticketId)} className="btn btn-secondary btn-sm mt-3">
+              <Copy className="h-4 w-4" /> Same problem: link as duplicate
             </button>
           </li>
         ))}
       </ul>
-      <input
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        maxLength={500}
-        placeholder="Note (optional, internal)"
-        className="w-full rounded border border-zinc-300 px-3 py-2 text-sm"
-      />
-      <button disabled={busy} onClick={() => send("dismiss")} className="rounded border border-zinc-400 px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-60">
+      <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Note (optional, internal)" className="field" />
+      <button disabled={busy} onClick={() => send("dismiss")} className="btn btn-ghost w-full border border-slate-200">
         Not the same problem
       </button>
-      {error ? (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <ErrorLine message={error} />
     </div>
   );
 }

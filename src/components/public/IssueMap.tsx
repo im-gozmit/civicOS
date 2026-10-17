@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { LayerGroup, Map as LeafletMap } from "leaflet";
+import { AlertCircle, CheckCircle2, Clock, Info, Wrench } from "lucide-react";
 
 interface Marker {
   key: string;
@@ -15,9 +16,16 @@ interface Marker {
   reportedOn: string;
 }
 
-const COLORS = { new: "#d97706", working: "#2563eb", done: "#16a34a" } as const;
-const GROUP_LABEL = { new: "Waiting", working: "Being handled", done: "Fixed" } as const;
+type Group = Marker["group"];
+
+const COLORS: Record<Group, string> = { new: "#f59e0b", working: "#2563eb", done: "#16a34a" };
+const GROUP_LABEL: Record<Group, string> = { new: "Waiting", working: "Being handled", done: "Fixed" };
+const GROUP_ICON = { new: Clock, working: Wrench, done: CheckCircle2 } as const;
 const CENTER = { lat: 25.4358, lng: 81.8463 }; // Prayagraj
+
+function esc(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+}
 
 export function IssueMap() {
   const el = useRef<HTMLDivElement>(null);
@@ -27,7 +35,7 @@ export function IssueMap() {
   const [markers, setMarkers] = useState<Marker[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState("all");
-  const [group, setGroup] = useState("all");
+  const [group, setGroup] = useState<"all" | Group>("all");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -43,7 +51,7 @@ export function IssueMap() {
       const L = await import("leaflet");
       if (cancelled || !el.current || map.current) return;
       leaflet.current = L;
-      const m = L.map(el.current).setView([CENTER.lat, CENTER.lng], 12);
+      const m = L.map(el.current, { scrollWheelZoom: false }).setView([CENTER.lat, CENTER.lng], 12);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(m);
       layer.current = L.layerGroup().addTo(m);
       map.current = m;
@@ -68,8 +76,10 @@ export function IssueMap() {
     if (!ready || !L || !layer.current || !map.current) return;
     layer.current.clearLayers();
     for (const m of shown) {
-      L.circleMarker([m.lat, m.lng], { radius: 9, color: COLORS[m.group], fillColor: COLORS[m.group], fillOpacity: 0.7, weight: 2 })
-        .bindPopup(`<strong>${m.category}</strong><br/>${m.status}<br/><small>Reported ${m.reportedOn}</small>`)
+      L.circleMarker([m.lat, m.lng], { radius: 10, color: "#ffffff", weight: 2.5, fillColor: COLORS[m.group], fillOpacity: 0.95 })
+        .bindPopup(
+          `<strong style="font-size:15px">${esc(m.category)}</strong><br/><span style="color:${COLORS[m.group]};font-weight:600">${esc(m.status)}</span><br/><small style="color:#64748b">Reported ${esc(m.reportedOn)}</small>`,
+        )
         .addTo(layer.current);
     }
     if (shown.length > 0) {
@@ -77,57 +87,74 @@ export function IssueMap() {
     }
   }, [shown, ready]);
 
-  const counts = {
+  const counts: Record<Group, number> = {
     new: (markers ?? []).filter((m) => m.group === "new").length,
     working: (markers ?? []).filter((m) => m.group === "working").length,
     done: (markers ?? []).filter((m) => m.group === "done").length,
   };
 
+  const chip = (active: boolean) =>
+    `chip ${active ? "border-teal-600 bg-teal-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}`;
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <label>
-          <span className="sr-only">Type of problem</span>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded border border-zinc-300 px-2 py-1.5">
-            <option value="all">All problems</option>
-            {categories.map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Status</span>
-          <select value={group} onChange={(e) => setGroup(e.target.value)} className="rounded border border-zinc-300 px-2 py-1.5">
-            <option value="all">Any status</option>
-            <option value="new">{GROUP_LABEL.new}</option>
-            <option value="working">{GROUP_LABEL.working}</option>
-            <option value="done">{GROUP_LABEL.done}</option>
-          </select>
-        </label>
-        <span className="text-zinc-500">{markers ? `${shown.length} shown` : "Loading…"}</span>
+    <div className="space-y-4">
+      {/* Status filters double as the legend */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {(["new", "working", "done"] as const).map((g) => {
+          const Icon = GROUP_ICON[g];
+          const active = group === g;
+          return (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGroup(active ? "all" : g)}
+              aria-pressed={active}
+              className={`card flex items-center gap-3 p-4 text-left transition ${active ? "ring-2 ring-teal-500" : "hover:-translate-y-0.5 hover:shadow-pop"}`}
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl text-white" style={{ background: COLORS[g] }}>
+                <Icon className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-display text-2xl font-extrabold tabular-nums text-slate-900">{markers ? counts[g] : "–"}</span>
+                <span className="block text-sm text-slate-500">{GROUP_LABEL[g]}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div ref={el} className="h-[60vh] w-full rounded border border-zinc-300" role="application" aria-label="Map of reported problems" />
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by type of problem">
+        <button type="button" onClick={() => setCategory("all")} className={chip(category === "all")} aria-pressed={category === "all"}>
+          All problems
+        </button>
+        {categories.map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setCategory(id)} className={chip(category === id)} aria-pressed={category === id}>
+            {label}
+          </button>
+        ))}
+        <span className="ml-auto text-sm text-slate-500">{markers ? `${shown.length} shown` : "Loading…"}</span>
+      </div>
+
+      <div className="card relative overflow-hidden p-1.5">
+        <div ref={el} className="h-[58vh] min-h-[360px] w-full rounded-xl" role="application" aria-label="Map of reported problems" />
+        {markers && markers.length === 0 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+            <p className="rounded-xl bg-white/95 px-4 py-3 text-center text-sm font-medium text-slate-600 shadow-pop">No problems have been reported yet.</p>
+          </div>
+        ) : null}
+      </div>
 
       {error ? (
-        <p role="alert" className="text-sm text-red-700">
-          {error}
-        </p>
+        <div role="alert" className="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <p className="font-medium">{error}</p>
+        </div>
       ) : null}
 
-      <ul className="flex flex-wrap gap-4 text-sm">
-        {(["new", "working", "done"] as const).map((g) => (
-          <li key={g} className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-full" style={{ background: COLORS[g] }} />
-            {GROUP_LABEL[g]} ({counts[g]})
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-zinc-500">
-        Locations are approximate on purpose, to protect people&apos;s privacy. Duplicate and rejected reports are not shown.
-        These are reports sent to CivicOS, not an official government record.
+      <p className="flex gap-2 text-xs leading-relaxed text-slate-500">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        Locations are approximate on purpose, to protect people&apos;s privacy. Duplicate and rejected reports are not shown. These are
+        reports sent to CivicOS, not an official government record.
       </p>
     </div>
   );

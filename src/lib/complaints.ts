@@ -209,6 +209,10 @@ export function notificationsFor(complaintId: string): Promise<Notification[]> {
   return withRepo((r) => r.notificationsFor(complaintId, 5));
 }
 
+export function publicStats(): Promise<{ received: number; working: number; fixed: number }> {
+  return withRepo((r) => r.publicCounts());
+}
+
 export function fileIsKnown(file: string): Promise<boolean> {
   return withRepo((r) => r.fileIsKnown(file));
 }
