@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { getAdmin } from "@/lib/adminAuth";
 import { LogoutButton } from "@/components/admin/LogoutButton";
+import { DemoBanner } from "@/components/ui/DemoBanner";
 import { Logo } from "@/components/ui/Logo";
 
 async function WhoAmI() {
@@ -21,6 +22,7 @@ async function WhoAmI() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <DemoBanner />
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-lg">
         <div className="container-page flex h-16 items-center justify-between gap-4">
           <div className="flex items-center gap-3">

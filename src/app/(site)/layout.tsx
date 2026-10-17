@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { DemoBanner } from "@/components/ui/DemoBanner";
 import { Logo } from "@/components/ui/Logo";
 import { MobileTabBar } from "@/components/ui/MobileTabBar";
 import { SiteFooter } from "@/components/ui/SiteFooter";
@@ -23,6 +24,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const whatsappHref = bot ? `https://wa.me/${bot}?text=${encodeURIComponent("Hi")}` : null;
   return (
     <>
+      <DemoBanner />
       {/* The header and tab bar read the current address, which is only known per request. */}
       <Suspense fallback={<HeaderFallback />}>
         <SiteHeader whatsappHref={whatsappHref} />
