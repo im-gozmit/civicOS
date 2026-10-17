@@ -20,9 +20,63 @@ import {
   UserCheck,
   Waves,
 } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import { IssueMap } from "@/components/public/IssueMap";
 import { BuildathonBanner } from "@/components/public/Prayagraj";
 import { AzadStatue } from "@/components/public/AzadStatue";
+
+function WhatsAppGlyph({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+/** Small card in the hero: the whole WhatsApp flow in three steps. The steps light up one after another. */
+function SixtySecondCard({ href }: { href: string | null }) {
+  const steps = [
+    { Icon: Camera, label: "Click an image" },
+    { Icon: Send, label: "Send on WhatsApp" },
+    { Icon: BadgeCheck, label: "Complaint registered" },
+  ];
+  const body = (
+    <>
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#25d366] text-white shadow-[2px_2px_0_0_var(--ink)] ring-2 ring-slate-900">
+          <WhatsAppGlyph className="h-6 w-6" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-extrabold leading-tight">Complaint in under 60 seconds</p>
+          <p className="hero-card-sub text-xs text-white/70">No app. No sign-up.</p>
+        </div>
+        <span className="flex shrink-0 items-center gap-1 rounded-md bg-amber-300 px-2 py-1 font-mono text-xs font-black text-slate-900">
+          <Timer className="h-3.5 w-3.5" /> 60s
+        </span>
+      </div>
+      <ol className="mt-3 flex items-stretch gap-1.5 text-xs font-semibold sm:text-sm">
+        {steps.map(({ Icon, label }, i) => (
+          <li key={label} className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="wa-step flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2 py-2" style={{ animationDelay: `${i * 1.6}s` }}>
+              <Icon className="h-4 w-4 shrink-0 text-amber-300" />
+              <span className="leading-tight">{label}</span>
+            </span>
+            {i < steps.length - 1 ? <ArrowRight className="h-3.5 w-3.5 shrink-0 text-amber-300" aria-hidden /> : null}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+  const cls =
+    "hero-card mt-6 block max-w-xl rounded-xl border border-white/30 bg-black/35 p-4 text-white backdrop-blur-md transition duration-300 hover:-translate-y-0.5 hover:border-amber-300";
+  return href ? (
+    <a href={href} className={cls} aria-label="Start a complaint on WhatsApp. Click an image, send it on WhatsApp, and your complaint is registered in under 60 seconds.">
+      {body}
+    </a>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
 
 export default function Home() {
   const bot = (process.env.WHATSAPP_BOT_NUMBER || "").replace(/\D/g, "");
@@ -85,7 +139,9 @@ export default function Home() {
               </Link>
             </div>
 
-            <ul className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
+            <SixtySecondCard href={wa} />
+
+            <ul className="hero-trust mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
               <li className="flex items-center gap-2"><CheckCheck className="h-4 w-4 text-amber-300" /> Free, no sign-up</li>
               <li className="flex items-center gap-2"><Languages className="h-4 w-4 text-amber-300" /> English and हिन्दी</li>
               <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-amber-300" /> Private by design</li>
@@ -138,16 +194,16 @@ export default function Home() {
       <section id="how" className="container-page scroll-mt-24 py-12" aria-labelledby="how-title">
         <p className="eyebrow">End to end</p>
         <h2 id="how-title" className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] text-slate-900 sm:text-5xl">
-          Citizen <span className="text-teal-600">&rarr;</span> AI <span className="text-teal-600">&rarr;</span> Staff <span className="text-teal-600">&rarr;</span>{" "}
+          Citizen <span className="text-teal-600">&rarr;</span> Agents <span className="text-teal-600">&rarr;</span> Staff <span className="text-teal-600">&rarr;</span>{" "}
           <span className="italic text-teal-600">Verified.</span>
         </h2>
         <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
             { Icon: Camera, text: "Citizen uploads photo, voice, location" },
-            { Icon: Sparkles, text: "AI understands and classifies the issue" },
-            { Icon: UserCheck, text: "AI suggests the team, staff verify it" },
+            { Icon: Sparkles, text: "Agents understand and classify the issue" },
+            { Icon: UserCheck, text: "Agents suggest the team, staff verify it" },
             { Icon: Bell, text: "Staff resolve it and upload proof" },
-            { Icon: ShieldCheck, text: "AI checks the repair, a person closes the loop" },
+            { Icon: ShieldCheck, text: "Agents check the repair, a person closes the loop" },
           ].map(({ Icon, text }, i) => (
             <li
               key={text}

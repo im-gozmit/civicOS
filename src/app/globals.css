@@ -337,3 +337,39 @@ html[data-view="classic"] .site-header .header-wa {
     width: 100%;
   }
 }
+
+/* The three steps in the hero card light up in turn, like a message moving along. */
+@keyframes wastep {
+  0%, 30%, 100% {
+    background-color: rgb(255 255 255 / 0.1);
+    border-color: rgb(255 255 255 / 0.2);
+    transform: none;
+  }
+  10%, 22% {
+    background-color: rgb(251 191 36 / 0.3);
+    border-color: rgb(251 191 36 / 0.9);
+    transform: translateY(-2px);
+  }
+}
+.wa-step {
+  animation: wastep 4.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-step {
+    animation: none;
+  }
+}
+html[data-view="classic"] .hero-card {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  backdrop-filter: none;
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+html[data-view="classic"] .hero-card .hero-card-sub {
+  color: #5c5547;
+}
+html[data-view="classic"] .hero-card .wa-step {
+  border-color: rgb(26 23 19 / 0.15);
+  background-color: rgb(26 23 19 / 0.04);
+}
