@@ -2,11 +2,10 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getAdmin } from "@/lib/adminAuth";
-import { ALL_QUEUES, CATEGORY_LABEL, assignmentOf, getById, linkedReportsOf, needsDuplicateReview } from "@/lib/complaints";
+import { ALL_QUEUES, CATEGORY_LABEL, assignmentOf, getById, linkedReportsOf, needsDuplicateReview, notificationsFor, statusesOf } from "@/lib/complaints";
 import { TEAM_IDS, TEAM_LABEL } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
-import { withStore } from "@/lib/localStore";
 import { DuplicateCard, EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 
 export const metadata = { title: "Complaint — CivicOS admin" };
@@ -31,20 +30,19 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   const c = await getById(id);
   if (!c) notFound();
 
-  const notifications = await withStore((s) => s.notifications.filter((n) => n.complaintId === id).slice(-5).reverse());
+  const notifications = await notificationsFor(id);
   const linked = await linkedReportsOf(c.id);
   const reviewDuplicates = needsDuplicateReview(c);
+  const candidateStatuses = reviewDuplicates ? await statusesOf((c.duplicateCandidates ?? []).map((k) => k.id)) : {};
   const candidates = reviewDuplicates
-    ? await withStore((s) =>
-        (c.duplicateCandidates ?? []).map((k) => ({
-          id: k.id,
-          ticketId: k.ticketId,
-          distanceM: k.distanceM,
-          reason: k.reason,
-          sameImage: k.sameImage,
-          status: STATUS_LABEL[s.complaints.find((x) => x.id === k.id)?.status ?? "REPORTED"],
-        })),
-      )
+    ? (c.duplicateCandidates ?? []).map((k) => ({
+        id: k.id,
+        ticketId: k.ticketId,
+        distanceM: k.distanceM,
+        reason: k.reason,
+        sameImage: k.sameImage,
+        status: STATUS_LABEL[candidateStatuses[k.id] ?? "REPORTED"],
+      }))
     : [];
   const assignment = assignmentOf(c);
   const pendingTeam = assignment.state === "PENDING_VERIFICATION";

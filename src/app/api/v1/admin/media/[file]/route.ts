@@ -1,9 +1,7 @@
-import { readFile } from "fs/promises";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdmin } from "@/lib/adminAuth";
-import { listAll } from "@/lib/complaints";
-import { MEDIA_DIR } from "@/lib/localStore";
+import { fileIsKnown } from "@/lib/complaints";
+import { getFile } from "@/lib/storage";
 
 const TYPES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -23,18 +21,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ fil
 
   const { file } = await params;
   if (!/^[A-Za-z0-9_-]+\.[a-z0-9]{2,4}$/.test(file)) return new NextResponse("Bad request", { status: 400 });
+  if (!(await fileIsKnown(file))) return new NextResponse("Not found", { status: 404 });
 
-  const all = await listAll();
-  const known = all.some((c) => c.mediaFiles.includes(file) || c.audioFiles.includes(file) || (c.repairChecks ?? []).some((r) => r.file === file));
-  if (!known) return new NextResponse("Not found", { status: 404 });
-
-  try {
-    const bytes = await readFile(path.join(MEDIA_DIR, file));
-    const ext = file.split(".").pop() ?? "";
-    return new NextResponse(bytes, {
-      headers: { "Content-Type": TYPES[ext] ?? "application/octet-stream", "Cache-Control": "private, no-store" },
-    });
-  } catch {
-    return new NextResponse("Not found", { status: 404 });
-  }
+  const bytes = await getFile(file);
+  if (!bytes) return new NextResponse("Not found", { status: 404 });
+  const ext = file.split(".").pop() ?? "";
+  return new NextResponse(new Uint8Array(bytes), {
+    headers: { "Content-Type": TYPES[ext] ?? "application/octet-stream", "Cache-Control": "private, no-store" },
+  });
 }

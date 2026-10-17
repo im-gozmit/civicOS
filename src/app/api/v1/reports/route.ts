@@ -16,7 +16,7 @@ function num(v: FormDataEntryValue | null): number | null {
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req.headers);
-  if (!allow(`report:${ip}`, 5, 60 * 60 * 1000) || !allow("report:global", 300, 24 * 60 * 60 * 1000)) {
+  if (!(await allow(`report:${ip}`, 5, 60 * 60 * 1000)) || !(await allow("report:global", 300, 24 * 60 * 60 * 1000))) {
     return NextResponse.json({ ok: false, error: "Too many reports from this connection. Please try again later." }, { status: 429 });
   }
 

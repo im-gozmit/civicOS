@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import { z } from "zod";
 import { TEAM_DESCRIPTION, TEAM_IDS } from "../teams.ts";
 
@@ -170,7 +169,7 @@ function list(envName: string, fallback: string): string[] {
 }
 
 export interface TriageInput {
-  imagePath: string; // absolute path to the saved photo
+  image: Buffer; // the photo's bytes
   mimeType: string;
   caption: string;
   transcript?: string;
@@ -181,8 +180,7 @@ export interface TriageInput {
  * Callers must handle null with their deterministic fallback (human review).
  */
 export async function runTriage(input: TriageInput, log?: (entry: Record<string, unknown>) => void): Promise<TriageRun | null> {
-  const bytes = await readFile(input.imagePath);
-  const b64 = bytes.toString("base64");
+  const b64 = input.image.toString("base64");
   const text = userText(input.caption, input.transcript);
 
   const providers = list("AI_PROVIDER_ORDER", "gemini,openai");

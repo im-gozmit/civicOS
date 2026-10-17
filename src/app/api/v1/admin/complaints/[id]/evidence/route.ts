@@ -1,13 +1,11 @@
 import { createHash } from "crypto";
-import { readFile, unlink } from "fs/promises";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdmin } from "@/lib/adminAuth";
 import { addRepairCheck, getRepairContext } from "@/lib/complaints";
-import { MEDIA_DIR } from "@/lib/localStore";
+import { deleteFile, getFile } from "@/lib/storage";
 import { saveImageUpload } from "@/lib/uploads";
 import { verifyRepair } from "@/lib/ai/verifyRepair";
-import { logEvent } from "@/lib/whatsapp/eventLog";
+import { logEvent } from "@/lib/events";
 import { allow } from "@/lib/rateLimit";
 import type { RepairCheck } from "@/lib/types";
 
@@ -20,7 +18,7 @@ function mimeFor(file: string) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getAdmin();
   if (!admin) return NextResponse.json({ error: "Not authorised." }, { status: 401 });
-  if (!allow(`evidence:${admin.email}`, 30, 60 * 60 * 1000)) {
+  if (!(await allow(`evidence:${admin.email}`, 30, 60 * 60 * 1000))) {
     return NextResponse.json({ error: "Too many uploads. Please wait." }, { status: 429 });
   }
 
@@ -39,24 +37,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!saved.ok) return NextResponse.json({ error: saved.error }, { status: 400 });
 
   // Reject the same picture being reused as "proof" (the original, or an earlier upload).
-  const beforeHashes = await Promise.all(
-    ctx.before.map(async (f) => createHash("sha256").update(await readFile(path.join(MEDIA_DIR, f)).catch(() => Buffer.alloc(0))).digest("hex")),
-  );
+  const beforeBytes = await Promise.all(ctx.before.map((f) => getFile(f)));
+  const beforeHashes = beforeBytes.map((b) => createHash("sha256").update(b ?? Buffer.alloc(0)).digest("hex"));
   if (beforeHashes.includes(saved.sha256) || ctx.shas.includes(saved.sha256)) {
-    await unlink(path.join(MEDIA_DIR, saved.file)).catch(() => undefined);
+    await deleteFile(saved.file);
     return NextResponse.json({ error: "This is the same photo as the original or an earlier upload. Please take a new photo after the repair." }, { status: 409 });
   }
 
-  const run = await verifyRepair(
-    {
-      beforePath: path.join(MEDIA_DIR, ctx.before[0]),
-      beforeMime: mimeFor(ctx.before[0]),
-      afterPath: path.join(MEDIA_DIR, saved.file),
-      afterMime: saved.mime,
-      summary: ctx.summary,
-    },
-    (e) => void logEvent(e),
-  ).catch(() => null);
+  const afterBytes = await getFile(saved.file);
+  const run =
+    beforeBytes[0] && afterBytes
+      ? await verifyRepair(
+          { before: beforeBytes[0], beforeMime: mimeFor(ctx.before[0]), after: afterBytes, afterMime: saved.mime, summary: ctx.summary },
+          (e) => void logEvent(e),
+        ).catch(() => null)
+      : null;
 
   const check: RepairCheck = {
     file: saved.file,

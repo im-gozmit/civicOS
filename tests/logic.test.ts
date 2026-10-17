@@ -85,11 +85,11 @@ describe("upload sniffing (type comes from the bytes, not the name)", () => {
 });
 
 describe("rate limiting", () => {
-  it("blocks after the limit and counts keys separately", () => {
-    expect(allow("k1", 2, 1000)).toBe(true);
-    expect(allow("k1", 2, 1000)).toBe(true);
-    expect(allow("k1", 2, 1000)).toBe(false);
-    expect(allow("k2", 2, 1000)).toBe(true);
+  it("blocks after the limit and counts keys separately", async () => {
+    expect(await allow("k1", 2, 1000)).toBe(true);
+    expect(await allow("k1", 2, 1000)).toBe(true);
+    expect(await allow("k1", 2, 1000)).toBe(false);
+    expect(await allow("k2", 2, 1000)).toBe(true);
   });
 });
 
@@ -113,7 +113,7 @@ describe("admin login and session", () => {
 
 describe("complaints: team verification and notifications", () => {
   beforeAll(async () => {
-    await import("@/lib/localStore"); // make sure DATA_DIR was picked up
+    await import("@/lib/db"); // make sure the temporary database is ready
   });
 
   it("starts as TRIAGED with the team only suggested, and a unique ticket + tracking token", async () => {
@@ -137,20 +137,20 @@ describe("complaints: team verification and notifications", () => {
 
   it("confirm: moves to ASSIGNED and queues exactly one citizen notification", async () => {
     const { verifyAssignment } = await import("@/lib/complaints");
-    const { withStore } = await import("@/lib/localStore");
+    const { withRepo } = await import("@/lib/repo");
     const c = await newComplaint();
-    const before = await withStore((s) => s.notifications.length);
+    const before = await withRepo((r) => r.countNotifications());
     const r = await verifyAssignment(c.id, "confirm", undefined, "", "admin", trackUrl);
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.complaint.status).toBe("ASSIGNED");
       expect(r.complaint.assignment?.state).toBe("CONFIRMED");
     }
-    expect(await withStore((s) => s.notifications.length)).toBe(before + 1);
+    expect(await withRepo((r) => r.countNotifications())).toBe(before + 1);
     // a second verification must fail and must not send another message
     const again = await verifyAssignment(c.id, "confirm", undefined, "", "admin", trackUrl);
     expect(again.ok).toBe(false);
-    expect(await withStore((s) => s.notifications.length)).toBe(before + 1);
+    expect(await withRepo((r) => r.countNotifications())).toBe(before + 1);
   });
 
   it("correct: needs a valid, different team and records the change", async () => {
@@ -169,12 +169,12 @@ describe("complaints: team verification and notifications", () => {
 
   it("keeps internal notes out of the citizen-visible history and notification", async () => {
     const { verifyAssignment } = await import("@/lib/complaints");
-    const { withStore } = await import("@/lib/localStore");
+    const { notificationsFor } = await import("@/lib/complaints");
     const c = await newComplaint();
     const r = await verifyAssignment(c.id, "correct", "DRAINAGE", "SECRET-INTERNAL-REASON", "admin", trackUrl);
     expect(r.ok).toBe(true);
     if (r.ok) expect(JSON.stringify(r.complaint.history)).not.toContain("SECRET-INTERNAL-REASON");
-    const last = await withStore((s) => s.notifications.at(-1));
+    const last = (await notificationsFor(c.id))[0];
     expect(last?.text).not.toContain("SECRET-INTERNAL-REASON");
   });
 

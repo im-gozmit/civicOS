@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import { z } from "zod";
 
 // Speech-to-text for citizen voice notes (Hindi, Hinglish, English). Gemini first, OpenAI Whisper
@@ -103,12 +102,12 @@ function list(envName: string, fallback: string): string[] {
 
 /** Returns a transcription or null (callers just continue without the voice text). */
 export async function transcribeAudio(
-  audioPath: string,
+  bytes: Buffer,
+  fileName: string,
   log?: (entry: Record<string, unknown>) => void,
 ): Promise<Transcription | null> {
-  const bytes = await readFile(audioPath);
-  const ext = audioPath.split(".").pop()?.toLowerCase() ?? "ogg";
-  const mime = audioMime(audioPath);
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "ogg";
+  const mime = audioMime(fileName);
   const b64 = bytes.toString("base64");
 
   const attempts: Array<{ provider: "gemini" | "openai"; model: string }> = [];

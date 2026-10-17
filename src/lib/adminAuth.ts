@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { rateClear, rateCount, rateRecord } from "@/lib/rateLimit";
 
 // Admin access for the prototype: ONE admin account whose credentials live in environment
 // variables. There is no signup and no role is ever read from a request. Replaced by Supabase
@@ -64,27 +65,20 @@ export async function getAdmin(): Promise<{ email: string } | null> {
   return verifySessionToken(store.get(ADMIN_COOKIE)?.value);
 }
 
-// --- Login throttling (in memory; fine for one process) ---------------------------------------
-const attempts = new Map<string, { count: number; resetAt: number }>();
+// --- Login throttling (counted in the database, so it holds across servers) -------------------
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 
-export function loginAllowed(key: string): boolean {
-  const now = Date.now();
-  const a = attempts.get(key);
-  if (!a || a.resetAt < now) return true;
-  return a.count < MAX_ATTEMPTS;
+export async function loginAllowed(key: string): Promise<boolean> {
+  return (await rateCount("login:" + key, WINDOW_MS)) < MAX_ATTEMPTS;
 }
 
-export function recordLoginFailure(key: string) {
-  const now = Date.now();
-  const a = attempts.get(key);
-  if (!a || a.resetAt < now) attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-  else a.count += 1;
+export async function recordLoginFailure(key: string): Promise<void> {
+  await rateRecord("login:" + key);
 }
 
-export function clearLoginFailures(key: string) {
-  attempts.delete(key);
+export async function clearLoginFailures(key: string): Promise<void> {
+  await rateClear("login:" + key);
 }
 
 export const SESSION_COOKIE_OPTIONS = {

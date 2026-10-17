@@ -1,9 +1,9 @@
-import { withStore } from "@/lib/localStore";
+import { withRepo } from "@/lib/repo";
 import { CATEGORY_LABEL, bindToSender, getOwnByTicket, listForSender } from "@/lib/complaints";
 import { processReport } from "@/lib/reportPipeline";
 import { sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
 import { downloadMedia } from "@/lib/whatsapp/media";
-import { logEvent } from "@/lib/whatsapp/eventLog";
+import { logEvent } from "@/lib/events";
 import type { Complaint, Conversation, PendingReport } from "@/lib/types";
 
 export interface InboundMessage {
@@ -19,19 +19,6 @@ export interface InboundMessage {
 
 const LOCATION_FRESH_MS = 10 * 60 * 1000; // a location sent just before the photo still counts
 const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
-
-// Messages from one sender are handled one at a time so photo + location arriving together
-// cannot race on the same conversation record.
-const locks = new Map<string, Promise<unknown>>();
-export function handleInbound(msg: InboundMessage): Promise<void> {
-  const prev = locks.get(msg.senderKey) ?? Promise.resolve();
-  const next = prev.then(() => processMessage(msg)).catch((err) => console.error("[conversation]", err));
-  locks.set(msg.senderKey, next);
-  next.finally(() => {
-    if (locks.get(msg.senderKey) === next) locks.delete(msg.senderKey);
-  });
-  return next as Promise<void>;
-}
 
 // --- Replies -----------------------------------------------------------------------------------
 
@@ -73,69 +60,64 @@ function successMessage(c: Complaint) {
 
 async function reply(to: string, text: string) {
   const r = await sendText(to, text);
-  await logEvent({ sent: { ok: r.ok, status: r.status, error: r.ok ? undefined : r.response } });
+  logEvent({ sent: { ok: r.ok, status: r.status, error: r.ok ? undefined : r.response } });
 }
 
 async function askForLocation(to: string) {
   const body = "Please share the location of the problem so we can register it. / कृपया समस्या की लोकेशन भेजें।";
   const r = await sendLocationRequest(to, body);
-  await logEvent({ sent: { ok: r.ok, status: r.status, kind: "location_request", error: r.ok ? undefined : r.response } });
+  logEvent({ sent: { ok: r.ok, status: r.status, kind: "location_request", error: r.ok ? undefined : r.response } });
   if (!r.ok) await reply(to, body + "\n(📎 > Location > Send your current location)");
 }
 
-// --- State machine -----------------------------------------------------------------------------
+// --- Conversation state ------------------------------------------------------------------------
 
-async function getConversation(msg: InboundMessage): Promise<Conversation> {
-  return withStore((store) => {
-    const existing = store.conversations[msg.senderKey];
+/**
+ * Reads the sender's conversation, lets `fn` change it, and saves it, all in ONE short database
+ * transaction with the row locked. Two messages from the same person (a photo and its location)
+ * can therefore never overwrite each other, even if different servers handle them.
+ */
+async function mutate<T>(msg: InboundMessage, fn: (conv: Conversation) => T): Promise<T> {
+  return withRepo(async (r) => {
     const now = new Date().toISOString();
-    if (existing) {
-      existing.phone = msg.from;
-      existing.lastInboundAt = now;
-      if (existing.pending && Date.now() - Date.parse(existing.pending.startedAt) > PENDING_TTL_MS) {
-        existing.pending = undefined;
-        existing.state = "IDLE";
-      }
-      existing.updatedAt = now;
-      return structuredClone(existing);
+    let conv = await r.getConversation(msg.senderKey, true);
+    if (!conv) {
+      conv = { senderKey: msg.senderKey, phone: msg.from, state: "IDLE", updatedAt: now };
+      await r.saveConversation(conv); // creates the row so it can be locked from now on
     }
-    const fresh: Conversation = { senderKey: msg.senderKey, phone: msg.from, state: "IDLE", lastInboundAt: now, updatedAt: now };
-    store.conversations[msg.senderKey] = fresh;
-    return structuredClone(fresh);
+    conv.phone = msg.from;
+    conv.lastInboundAt = now;
+    if (conv.pending && Date.now() - Date.parse(conv.pending.startedAt) > PENDING_TTL_MS) {
+      conv.pending = undefined;
+      conv.state = "IDLE";
+    }
+    const result = fn(conv);
+    await r.saveConversation(conv);
+    return result;
   });
 }
 
-function saveConversation(conv: Conversation) {
-  return withStore((store) => {
-    store.conversations[conv.senderKey] = { ...conv, updatedAt: new Date().toISOString() };
-  });
-}
-
-async function register(conv: Conversation, pending: PendingReport, latitude: number, longitude: number) {
+async function register(to: string, senderKey: string, pending: PendingReport, latitude: number, longitude: number) {
   await reply(
-    conv.phone,
+    to,
     pending.audioFiles.length > 0
       ? "🔎 Analysing your photo and voice note. This can take up to a minute…"
       : "🔎 Analysing your photo, this takes about 15 seconds…",
   );
   const result = await processReport({
     source: "whatsapp",
-    senderKey: conv.senderKey,
-    senderPhone: conv.phone,
+    senderKey,
+    senderPhone: to,
     caption: pending.caption,
     mediaFiles: pending.mediaFiles,
     audioFiles: pending.audioFiles,
     latitude,
     longitude,
   });
-  conv.pending = undefined;
-  conv.state = "IDLE";
-  conv.lastLocation = undefined; // each report needs its own location
-  await saveConversation(conv);
 
   if (!result.ok) {
     await reply(
-      conv.phone,
+      to,
       result.code === "NOT_CIVIC"
         ? "I could not see a public civic problem in that photo, so I did not register a complaint.\n" +
             `What I saw: ${result.seen}\n\n` +
@@ -145,11 +127,24 @@ async function register(conv: Conversation, pending: PendingReport, latitude: nu
     );
     return;
   }
-  await reply(conv.phone, successMessage(result.complaint));
+  await reply(to, successMessage(result.complaint));
+}
+
+type ImageDecision =
+  | { action: "ATTACHED" }
+  | { action: "ASK" }
+  | { action: "REGISTER"; pending: PendingReport; latitude: number; longitude: number };
+
+export async function handleInbound(msg: InboundMessage): Promise<void> {
+  try {
+    await processMessage(msg);
+  } catch (err) {
+    console.error("[conversation]", err);
+  }
 }
 
 async function processMessage(msg: InboundMessage) {
-  const conv = await getConversation(msg);
+  const to = msg.from;
 
   switch (msg.type) {
     case "image": {
@@ -159,62 +154,85 @@ async function processMessage(msg: InboundMessage) {
         file = (await downloadMedia(msg.image.id)).file;
       } catch (err) {
         console.error("[conversation] media download failed", err);
-        await reply(conv.phone, "Sorry, I couldn't download that photo. Please try sending it again.");
+        await reply(to, "Sorry, I couldn't download that photo. Please try sending it again.");
         return;
       }
       const caption = msg.image.caption?.trim() ?? "";
 
-      // Extra photos for a report that is still waiting for its location are attached to it.
-      if (conv.state === "AWAITING_LOCATION" && conv.pending) {
-        conv.pending.mediaFiles.push(file);
-        if (caption) conv.pending.caption = [conv.pending.caption, caption].filter(Boolean).join(" ");
-        await saveConversation(conv);
-        await reply(conv.phone, "Added this photo to your report. Please share the location to finish.");
-        return;
-      }
+      // Decided atomically, after the (slow) download, against the freshest conversation state.
+      const decision = await mutate<ImageDecision>(msg, (conv) => {
+        // Extra photos for a report that is still waiting for its location are attached to it.
+        if (conv.state === "AWAITING_LOCATION" && conv.pending) {
+          conv.pending.mediaFiles.push(file);
+          if (caption) conv.pending.caption = [conv.pending.caption, caption].filter(Boolean).join(" ");
+          return { action: "ATTACHED" };
+        }
+        const pending: PendingReport = { caption, mediaFiles: [file], audioFiles: [], startedAt: new Date().toISOString() };
+        const loc = conv.lastLocation;
+        if (loc && Date.now() - Date.parse(loc.at) <= LOCATION_FRESH_MS) {
+          conv.lastLocation = undefined; // each report needs its own location
+          return { action: "REGISTER", pending, latitude: loc.latitude, longitude: loc.longitude };
+        }
+        conv.pending = pending;
+        conv.state = "AWAITING_LOCATION";
+        return { action: "ASK" };
+      });
 
-      const pending: PendingReport = { caption, mediaFiles: [file], audioFiles: [], startedAt: new Date().toISOString() };
-      const loc = conv.lastLocation;
-      if (loc && Date.now() - Date.parse(loc.at) <= LOCATION_FRESH_MS) {
-        await register(conv, pending, loc.latitude, loc.longitude);
-        return;
-      }
-      conv.pending = pending;
-      conv.state = "AWAITING_LOCATION";
-      await saveConversation(conv);
-      await reply(conv.phone, "📸 Got your photo.");
-      await askForLocation(conv.phone);
+      if (decision.action === "ATTACHED") await reply(to, "Added this photo to your report. Please share the location to finish.");
+      else if (decision.action === "ASK") {
+        await reply(to, "📸 Got your photo.");
+        await askForLocation(to);
+      } else await register(to, msg.senderKey, decision.pending, decision.latitude, decision.longitude);
       return;
     }
 
     case "location": {
       if (!msg.location) return;
       const { latitude, longitude } = msg.location;
-      if (conv.state === "AWAITING_LOCATION" && conv.pending) {
-        await register(conv, conv.pending, latitude, longitude);
-        return;
-      }
-      conv.lastLocation = { latitude, longitude, at: new Date().toISOString() };
-      await saveConversation(conv);
-      await reply(conv.phone, "📍 Got the location. Now send a photo of the problem within 10 minutes.");
+      const taken = await mutate<PendingReport | null>(msg, (conv) => {
+        if (conv.state === "AWAITING_LOCATION" && conv.pending) {
+          const p = conv.pending;
+          conv.pending = undefined;
+          conv.state = "IDLE";
+          conv.lastLocation = undefined;
+          return p;
+        }
+        conv.lastLocation = { latitude, longitude, at: new Date().toISOString() };
+        return null;
+      });
+      if (taken) await register(to, msg.senderKey, taken, latitude, longitude);
+      else await reply(to, "📍 Got the location. Now send a photo of the problem within 10 minutes.");
       return;
     }
 
     case "audio": {
       if (!msg.audio) return;
-      if (conv.state === "AWAITING_LOCATION" && conv.pending) {
-        try {
-          const { file } = await downloadMedia(msg.audio.id);
-          conv.pending.audioFiles.push(file);
-          await saveConversation(conv);
-          await reply(conv.phone, "🎙️ Got your voice note and added it. Please share the location to finish.");
-        } catch (err) {
-          console.error("[conversation] audio download failed", err);
-          await reply(conv.phone, "I couldn't download that voice note. Please share the location to finish your report.");
-        }
+      const waiting = await mutate(msg, (conv) => conv.state === "AWAITING_LOCATION" && !!conv.pending);
+      if (!waiting) {
+        await reply(to, "🎙️ Voice notes can be added to a report. Please send a photo of the problem first.");
         return;
       }
-      await reply(conv.phone, "🎙️ Voice notes can be added to a report. Please send a photo of the problem first.");
+      let file: string;
+      try {
+        file = (await downloadMedia(msg.audio.id)).file;
+      } catch (err) {
+        console.error("[conversation] audio download failed", err);
+        await reply(to, "I couldn't download that voice note. Please share the location to finish your report.");
+        return;
+      }
+      const attached = await mutate(msg, (conv) => {
+        if (conv.state === "AWAITING_LOCATION" && conv.pending) {
+          conv.pending.audioFiles.push(file);
+          return true;
+        }
+        return false;
+      });
+      await reply(
+        to,
+        attached
+          ? "🎙️ Got your voice note and added it. Please share the location to finish."
+          : "I got your voice note, but there is no report waiting any more. Please send the photo again.",
+      );
       return;
     }
 
@@ -224,9 +242,10 @@ async function processMessage(msg: InboundMessage) {
       // "TRACK CIV-000012 <token>" from the website's "Get updates on WhatsApp" button.
       const trackMatch = text.match(/^track\s+(CIV-\d+)\s+([A-Za-z0-9_-]{16,64})\s*$/i);
       if (trackMatch) {
-        const c = await bindToSender(trackMatch[1], trackMatch[2], conv.senderKey, conv.phone);
+        await mutate(msg, () => undefined); // records that this person just wrote (opens the 24h window)
+        const c = await bindToSender(trackMatch[1], trackMatch[2], msg.senderKey, to);
         await reply(
-          conv.phone,
+          to,
           c
             ? `✅ WhatsApp updates are on for ${c.ticketId}. We will message you when staff update it.\nTrack: ${trackUrl(c)}`
             : "I could not link that complaint. Check you sent the whole message from the website; it may already be linked.",
@@ -236,37 +255,40 @@ async function processMessage(msg: InboundMessage) {
 
       const statusMatch = text.match(/^status\s+(CIV-\d+)/i);
       if (statusMatch) {
-        const c = await getOwnByTicket(conv.senderKey, statusMatch[1]);
+        await mutate(msg, () => undefined);
+        const c = await getOwnByTicket(msg.senderKey, statusMatch[1]);
         await reply(
-          conv.phone,
-          c
-            ? `${c.ticketId}: ${c.status}\n${c.title}\nTrack: ${trackUrl(c)}`
-            : "I couldn't find that complaint for this number. Check the ID, or send *my complaints*.",
+          to,
+          c ? `${c.ticketId}: ${c.status}\n${c.title}\nTrack: ${trackUrl(c)}` : "I couldn't find that complaint for this number. Check the ID, or send *my complaints*.",
         );
         return;
       }
       if (/^(my complaints|complaints|my status|status)$/i.test(text)) {
-        const list = await listForSender(conv.senderKey);
+        await mutate(msg, () => undefined);
+        const list = await listForSender(msg.senderKey);
         await reply(
-          conv.phone,
+          to,
           list.length
             ? "Your recent complaints:\n" + list.map((c) => `• ${c.ticketId} — ${c.status} — ${c.title}`).join("\n")
             : "You have no complaints yet. Send a photo of a problem to start.",
         );
         return;
       }
-      if (conv.state === "AWAITING_LOCATION" && conv.pending) {
-        // Free text while a report is pending is extra description, not a command.
-        conv.pending.caption = [conv.pending.caption, text].filter(Boolean).join(" ");
-        await saveConversation(conv);
-        await reply(conv.phone, "Noted. Please share the location (📎 > Location) to finish your report.");
-        return;
-      }
-      await reply(conv.phone, HELP);
+
+      // Free text while a report is pending is extra description, not a command.
+      const appended = await mutate(msg, (conv) => {
+        if (conv.state === "AWAITING_LOCATION" && conv.pending) {
+          conv.pending.caption = [conv.pending.caption, text].filter(Boolean).join(" ");
+          return true;
+        }
+        return false;
+      });
+      await reply(to, appended ? "Noted. Please share the location (📎 > Location) to finish your report." : HELP);
       return;
     }
 
     default:
-      await reply(conv.phone, "I can only read photos, voice notes, locations and text. Please send a photo of the problem.");
+      await mutate(msg, () => undefined);
+      await reply(to, "I can only read photos, voice notes, locations and text. Please send a photo of the problem.");
   }
 }

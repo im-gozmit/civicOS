@@ -4,7 +4,7 @@
 
 A citizen sends a photo of a civic problem (pothole, garbage, blocked drain, broken street light) on **WhatsApp** or on the **website**, with a location, an optional caption and an optional voice note. AI reads the photo and text, rejects photos that are not civic issues, and **suggests which team should handle it**. A staff member **verifies that suggestion**, and only then is the citizen told. When work is done, staff upload an after-repair photo, AI gives an advisory opinion, and staff decide whether to close it.
 
-> **Status: working prototype (hackathon build).** Data is kept in a local JSON file, there is one admin account, and WhatsApp runs on Meta's free test number. Department queues are **simulated demo queues**, not a government integration.
+> **Status: working prototype (hackathon build).** Data lives in Postgres (a built-in local database for development, Supabase when hosted), there is one admin account, and WhatsApp runs on Meta's free test number. Department queues are **simulated demo queues**, not a government integration.
 
 The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 
@@ -24,8 +24,9 @@ The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 | "Get updates on WhatsApp" for website reports (`TRACK <ticket> <token>`) | Working |
 | **Duplicate detection**: new reports are compared with open ones nearby (same type, close, recent, identical photo); staff link or dismiss, nothing is merged automatically | Working |
 | **Public issue map** `/map` with approximate positions and no private details | Working |
-| Automated tests (35) | Passing |
-| Database, daily AI brief, templates for updates after 24 h | Not built yet |
+| Automated tests (48) | Passing |
+| **Real database** (Postgres) and private file storage (Supabase), phone numbers encrypted at rest, rate limits and duplicate-message protection kept in the database | Working, tested locally and as a production build |
+| Daily AI brief, templates for updates after 24 h, per-person admin accounts | Not built yet |
 
 ## How a report flows
 
@@ -37,7 +38,7 @@ The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md).
 
 ## Tech stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS · Zod · Leaflet · Vitest · Meta WhatsApp Cloud API · Google Gemini (primary) · OpenAI (fallback). Data lives in `.data/` for now and will move to Supabase/Postgres.
+Next.js 16 (App Router) · TypeScript · Tailwind CSS · Zod · Leaflet · Vitest · Postgres (Supabase; PGlite locally) · Meta WhatsApp Cloud API · Google Gemini (primary) · OpenAI (fallback).
 
 > This Next.js version has breaking changes. Read the guides in `node_modules/next/dist/docs/` before changing framework code (see [AGENTS.md](AGENTS.md)).
 
@@ -69,9 +70,29 @@ Copy `.env.example` to `.env.local`. **Never commit `.env.local`.** It is git-ig
 | `AI_PROVIDER_ORDER`, `GEMINI_MODELS`, `OPENAI_MODELS` | Optional: provider and model order, tried in sequence |
 | `SESSION_SECRET` | At least 32 random characters; signs the admin session |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | The single admin account. There is no sign-up. Use a long password. |
-| `DATA_DIR` | Optional: where to keep data instead of `./.data` |
+| `DATABASE_URL` | Hosted Postgres (Supabase "Transaction pooler" string). Leave empty locally and a built-in database is used |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Private file storage for photos and voice notes. Leave empty locally and files go in `.data/media` |
+| `PHONE_ENCRYPTION_KEY` | 64 hex characters; encrypts phone numbers in the database. **Back it up.** Required in production |
+| `DATA_DIR` | Optional: where local data lives instead of `./.data` |
 
 The app starts without any WhatsApp or AI credentials. Without AI it falls back to keyword triage and flags every report for human review.
+
+## Deploying (Supabase + Vercel)
+
+You need free accounts on **GitHub**, **Supabase** and **Vercel**.
+
+1. **Supabase:** create a project (region Mumbai). Copy the *Transaction pooler* connection string (`DATABASE_URL`), the *Project URL* (`SUPABASE_URL`) and the *service_role* key (`SUPABASE_SERVICE_ROLE_KEY`) into `.env.local`.
+2. Create the tables and the private photo bucket:
+   ```bash
+   npm run db:migrate
+   ```
+3. Optional: copy your old local test complaints into the hosted database (stop `npm run dev` first):
+   ```bash
+   npm run db:import
+   ```
+4. Push the code to GitHub, then in **Vercel** choose *Add New > Project*, import the repository, open *Environment Variables* and paste the contents of your `.env.local`. Change `PUBLIC_BASE_URL` to the project's `https://<name>.vercel.app` address (no trailing slash), and do not paste local-only values.
+5. Deploy. Then in Meta, set the webhook callback URL to `https://<name>.vercel.app/api/v1/webhooks/whatsapp` with the same verify token. The address no longer changes, so this is a one-time step.
+6. `vercel.json` raises the time limit for the webhook and report routes (AI work can take about a minute). Check that your Vercel plan allows it.
 
 ## Connecting WhatsApp (test number)
 
@@ -114,7 +135,10 @@ src/
   lib/ai/                         triage, transcribe, verifyRepair (Gemini/OpenAI + validation)
   lib/whatsapp/                   signature check, Cloud API client, media, conversation state machine
   lib/notifications.ts            outbox with retries; failures never undo a status change
-  lib/adminAuth.ts, uploads.ts, rateLimit.ts, localStore.ts
+  lib/db.ts, repo.ts, schemaSql.ts  database access (Postgres / PGlite), queries, the one schema
+  lib/storage.ts, crypto.ts        file storage (Supabase / local), phone-number encryption
+  lib/events.ts, rateLimit.ts      logging, WhatsApp duplicate-delivery protection, rate limits
+  lib/adminAuth.ts, uploads.ts
 tests/                            Vitest tests
 scripts/                          try-* helpers
 PROJECT_SPEC.md                   full product and engineering spec
@@ -122,8 +146,10 @@ PROJECT_SPEC.md                   full product and engineering spec
 
 ## Privacy and safety notes
 
-- Reporter phone numbers are stored **in plain text in a local file** during this prototype. Encrypt them before any real use.
-- Raw webhook events (which contain phone numbers) are logged to `.data/wa-events.jsonl`. `.data/` is git-ignored; do not share it.
+- Reporter phone numbers are encrypted (AES-256-GCM) before they reach the database. Keep `PHONE_ENCRYPTION_KEY` safe: without it stored numbers cannot be read.
+- Logs never contain phone numbers, message text or photos. Raw WhatsApp payloads are printed only if you set `WEBHOOK_DEBUG=1` locally.
+- Database tables have row level security switched on with no policies, so Supabase's public keys cannot read them. Only the server connects. Photos are in a private bucket.
+- `.data/` (local database and files) is git-ignored; do not share it.
 - Tracking links use an unguessable token. The public ticket lookup reveals only category, status and last-updated time.
 - The public map shows approximate positions (rounded and offset by roughly 100 m), the type of problem, a status label and the day of the report. No photos, text, ticket or tracking numbers, or contact details. Duplicate and rejected reports are hidden.
 - Photos and voice notes are private: only a signed-in admin can open them.
@@ -132,7 +158,7 @@ PROJECT_SPEC.md                   full product and engineering spec
 
 ## Roadmap
 
-1. Supabase/Postgres with PostGIS, encrypted phone numbers, per-person admin accounts, a permanent hosted address.
+1. Per-person admin accounts (Supabase Auth) and PostGIS for location queries.
 2. WhatsApp template messages for updates after 24 hours.
 3. Citizen "is it fixed?" confirmation over WhatsApp.
 4. Daily AI brief for staff, richer analytics.

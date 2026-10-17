@@ -1,6 +1,4 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { MEDIA_DIR } from "@/lib/localStore";
+import { putFile } from "@/lib/storage";
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
 const MAX_BYTES = 12 * 1024 * 1024;
@@ -42,7 +40,6 @@ export async function downloadMedia(mediaId: string): Promise<{ file: string; mi
   // The file name is derived from the numeric media id only, never from user-supplied text.
   const safeId = mediaId.replace(/[^0-9A-Za-z_-]/g, "");
   const file = `${safeId}.${ext}`;
-  await mkdir(MEDIA_DIR, { recursive: true });
-  await writeFile(path.join(MEDIA_DIR, file), bytes);
+  await putFile(file, bytes, mimeType);
   return { file, mimeType };
 }

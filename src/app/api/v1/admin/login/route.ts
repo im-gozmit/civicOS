@@ -21,15 +21,15 @@ export async function POST(req: NextRequest) {
   const password = typeof body?.password === "string" ? body.password : "";
   const key = `${ip}`;
 
-  if (!loginAllowed(key)) {
+  if (!(await loginAllowed(key))) {
     return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
   }
   if (!email || !password || !checkCredentials(email, password)) {
-    recordLoginFailure(key);
+    await recordLoginFailure(key);
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
 
-  clearLoginFailures(key);
+  await clearLoginFailures(key);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE, createSessionToken(email.trim().toLowerCase()), SESSION_COOKIE_OPTIONS);
   return res;

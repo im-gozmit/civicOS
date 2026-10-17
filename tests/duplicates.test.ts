@@ -112,17 +112,17 @@ describe("linking duplicates", () => {
 
   it("staff can link it (reason kept, citizen notified once), and undo it", async () => {
     const { linkDuplicate, changeStatus, getById, linkedReportsOf } = await import("@/lib/complaints");
-    const { withStore } = await import("@/lib/localStore");
+    const { withRepo } = await import("@/lib/repo");
     const a = await mk(26.3, 82.3, "IN.D3");
     const b = await mk(26.30002, 82.30002, "IN.D4");
-    const before = await withStore((s) => s.notifications.length);
+    const before = await withRepo((r) => r.countNotifications());
 
     const r = await linkDuplicate(b.id, a.ticketId, "Same pothole", "admin", trackUrl);
     expect(r.ok).toBe(true);
     expect((await getById(b.id))?.status).toBe("DUPLICATE");
     expect((await getById(b.id))?.duplicateOf?.ticketId).toBe(a.ticketId);
     expect((await linkedReportsOf(a.id)).map((x) => x.ticketId)).toEqual([b.ticketId]);
-    expect(await withStore((s) => s.notifications.length)).toBe(before + 1);
+    expect(await withRepo((r) => r.countNotifications())).toBe(before + 1);
 
     // undo needs a reason and clears the link
     expect((await changeStatus(b.id, "TRIAGED", "", "", "admin", trackUrl)).ok).toBe(false);

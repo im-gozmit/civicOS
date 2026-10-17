@@ -1,14 +1,15 @@
 import { randomBytes, randomUUID } from "crypto";
-import { withStore } from "@/lib/localStore";
+import { withRepo } from "@/lib/repo";
+import type { Repo } from "@/lib/repo";
 import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
-import { findDuplicateCandidates } from "@/lib/duplicates";
+import { findDuplicateCandidates, WINDOW_DAYS } from "@/lib/duplicates";
 import { DEFAULT_TEAM_FOR_CATEGORY, TEAM_IDS, TEAM_LABEL, isTeamId, teamIdFromLabel } from "@/lib/teams";
 import type { TeamId } from "@/lib/teams";
-import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, RepairCheck, Severity } from "@/lib/types";
+import type { Assignment, Category, Complaint, ComplaintStatus, HistoryEntry, Notification, RepairCheck, Severity } from "@/lib/types";
 
-// --- Triage (placeholder) ---------------------------------------------------------------------
-// Real multimodal AI triage plugs in here later. Until then this is a deterministic keyword guess
-// from the caption, and EVERY complaint is flagged for human review. The citizen is told so.
+// --- Triage fallback --------------------------------------------------------------------------
+// When no AI provider returns a valid result, a keyword guess from the caption is used and the
+// report is flagged for a person to review. The citizen is told so.
 
 const KEYWORDS: Array<[Category, RegExp]> = [
   ["ROAD_DAMAGE", /pothole|road|sadak|सड़क|गड्ढ|gaddha|crack/i],
@@ -77,6 +78,18 @@ export function fallbackAnalysis(caption: string): Analysis {
   };
 }
 
+// --- Small helpers ----------------------------------------------------------------------------
+
+async function queueNotification(r: Repo, complaintId: string, text: string, now: string): Promise<string> {
+  const n: Notification = { id: randomUUID(), complaintId, text, state: "PENDING", attempts: 0, lastError: null, createdAt: now, sentAt: null };
+  await r.insertNotification(n);
+  return n.id;
+}
+
+function addInternalNote(c: Complaint, now: string, by: string, text: string) {
+  c.internalNotes = [...(c.internalNotes ?? []), { at: now, by, text }];
+}
+
 // --- Creation and lookup ----------------------------------------------------------------------
 
 export interface NewComplaintInput {
@@ -94,12 +107,19 @@ export interface NewComplaintInput {
 
 export async function createComplaint(input: NewComplaintInput, t: Analysis): Promise<Complaint> {
   const now = new Date().toISOString();
-  return withStore((store) => {
-    store.counter += 1;
+  return withRepo(async (r) => {
+    const ticketNo = await r.nextTicketNo();
+
+    // Possible duplicates: open reports of the same kind nearby, plus any report with the same photo.
+    const since = new Date(Date.now() - WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
+    const nearby = await r.listNearbyOpen(t.category, input.latitude, input.longitude, 0.003, since);
+    const sameHash = (await Promise.all((input.mediaHashes ?? []).map((h) => r.findByMediaHash(h)))).flat();
+    const pool = [...new Map([...nearby, ...sameHash].map((c) => [c.id, c])).values()];
     const candidates = findDuplicateCandidates(
       { latitude: input.latitude, longitude: input.longitude, category: t.category, mediaHashes: input.mediaHashes ?? [] },
-      store.complaints,
+      pool,
     );
+
     const history: HistoryEntry[] = [
       { status: "REPORTED", note: `Report received via ${input.source}.`, actor: "citizen", at: now },
       {
@@ -113,7 +133,7 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
     ];
     const complaint: Complaint = {
       id: randomUUID(),
-      ticketId: `CIV-${String(store.counter).padStart(6, "0")}`,
+      ticketId: `CIV-${String(ticketNo).padStart(6, "0")}`,
       trackingToken: randomBytes(16).toString("base64url"), // 128-bit, URL-safe
       source: input.source,
       senderKey: input.senderKey,
@@ -150,24 +170,27 @@ export async function createComplaint(input: NewComplaintInput, t: Analysis): Pr
       createdAt: now,
       history,
     };
-    store.complaints.push(complaint);
+    await r.insertComplaint(complaint, ticketNo);
     return complaint;
   });
 }
 
 export function getByToken(token: string): Promise<Complaint | undefined> {
-  return withStore((s) => s.complaints.find((c) => c.trackingToken === token));
+  return withRepo((r) => r.getComplaintByToken(token));
+}
+
+export function getByTicket(ticketId: string): Promise<Complaint | undefined> {
+  return withRepo((r) => r.getComplaintByTicket(ticketId));
 }
 
 export function listForSender(senderKey: string): Promise<Complaint[]> {
-  return withStore((s) => s.complaints.filter((c) => c.senderKey === senderKey).slice(-5).reverse());
+  return withRepo((r) => r.listForSender(senderKey, 5));
 }
 
 /** A sender may look up only their own complaints by ticket id. */
-export function getOwnByTicket(senderKey: string, ticketId: string): Promise<Complaint | undefined> {
-  return withStore((s) =>
-    s.complaints.find((c) => c.senderKey === senderKey && c.ticketId.toLowerCase() === ticketId.toLowerCase()),
-  );
+export async function getOwnByTicket(senderKey: string, ticketId: string): Promise<Complaint | undefined> {
+  const c = await getByTicket(ticketId);
+  return c && c.senderKey === senderKey ? c : undefined;
 }
 
 // --- Admin operations -------------------------------------------------------------------------
@@ -175,19 +198,31 @@ export function getOwnByTicket(senderKey: string, ticketId: string): Promise<Com
 export const ALL_QUEUES = TEAM_IDS.map((id) => TEAM_LABEL[id]);
 
 export function listAll(): Promise<Complaint[]> {
-  return withStore((s) => [...s.complaints].reverse());
+  return withRepo((r) => r.listComplaints());
 }
 
 export function getById(id: string): Promise<Complaint | undefined> {
-  return withStore((s) => s.complaints.find((c) => c.id === id));
+  return withRepo((r) => r.getComplaint(id));
+}
+
+export function notificationsFor(complaintId: string): Promise<Notification[]> {
+  return withRepo((r) => r.notificationsFor(complaintId, 5));
+}
+
+export function fileIsKnown(file: string): Promise<boolean> {
+  return withRepo((r) => r.fileIsKnown(file));
+}
+
+export function statusesOf(ids: string[]): Promise<Record<string, ComplaintStatus>> {
+  return withRepo((r) => r.statusesOf(ids));
 }
 
 export type ChangeResult = { ok: true; complaint: Complaint; notificationId: string } | { ok: false; error: string };
 
 /**
  * Validated status change. The status, the history entry and the notification-outbox row are
- * written in ONE store transaction. Delivering the WhatsApp message happens afterwards and its
- * failure never undoes the status change.
+ * written in ONE database transaction (the complaint row is locked while we work). Delivering the
+ * WhatsApp message happens afterwards and its failure never undoes the status change.
  */
 export function changeStatus(
   id: string,
@@ -197,27 +232,21 @@ export function changeStatus(
   adminLabel: string,
   trackUrl: (c: Complaint) => string,
 ): Promise<ChangeResult> {
-  return withStore((store) => {
-    const c = store.complaints.find((x) => x.id === id);
-    if (!c) return { ok: false as const, error: "Complaint not found." };
-    if (!canTransition(c.status, to)) {
-      return { ok: false as const, error: `Cannot move from ${c.status} to ${to}.` };
-    }
-    if (to === "DUPLICATE") {
-      return { ok: false as const, error: "Use the duplicate review box to link this to the earlier report." };
-    }
-    if (to === "ASSIGNED" && from_isPendingAssignment(c)) {
-      return { ok: false as const, error: "Verify the suggested team first (use Confirm or Correct team)." };
-    }
+  return withRepo(async (r): Promise<ChangeResult> => {
+    const c = await r.getComplaint(id, true);
+    if (!c) return { ok: false, error: "Complaint not found." };
+    if (!canTransition(c.status, to)) return { ok: false, error: `Cannot move from ${c.status} to ${to}.` };
+    if (to === "DUPLICATE") return { ok: false, error: "Use the duplicate review box to link this to the earlier report." };
+    if (to === "ASSIGNED" && isPendingAssignment(c)) return { ok: false, error: "Verify the suggested team first (use Confirm or Correct team)." };
     const checks = c.repairChecks ?? [];
     if ((to === "RESOLVED_PENDING_VERIFICATION" || to === "CLOSED") && checks.length === 0) {
-      return { ok: false as const, error: "Upload an after-repair photo first (it is checked against the original photo)." };
+      return { ok: false, error: "Upload an after-repair photo first (it is checked against the original photo)." };
     }
     if (to === "CLOSED" && checks[checks.length - 1]?.verdict === "not_repaired" && !internalNote.trim()) {
-      return { ok: false as const, error: "The photo check says it does not look repaired. To close anyway, write the reason in the internal note." };
+      return { ok: false, error: "The photo check says it does not look repaired. To close anyway, write the reason in the internal note." };
     }
     if (NEEDS_REASON.includes(to) && !publicNote.trim() && !internalNote.trim()) {
-      return { ok: false as const, error: `A reason is required for ${to}.` };
+      return { ok: false, error: `A reason is required for ${to}.` };
     }
     const now = new Date().toISOString();
     const from = c.status;
@@ -226,52 +255,39 @@ export function changeStatus(
       c.duplicateReviewed = true;
     }
     c.status = to;
-    c.history.push({
-      status: to,
-      note: publicNote.trim() || `Status changed from ${from} to ${to}.`,
-      actor: "admin",
-      at: now,
-    });
+    c.history.push({ status: to, note: publicNote.trim() || `Status changed from ${from} to ${to}.`, actor: "admin", at: now });
     // Internal notes are kept in the admin log only and never shown to the citizen.
-    if (internalNote.trim()) {
-      c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: internalNote.trim() }];
-    }
-    const notificationId = randomUUID();
-    store.notifications.push({
-      id: notificationId,
-      complaintId: c.id,
-      text:
-        `📣 Update on ${c.ticketId}: ${STATUS_LABEL[to]}.` +
-        (publicNote.trim() ? `\n${publicNote.trim()}` : "") +
-        `\nTrack: ${trackUrl(c)}`,
-      state: "PENDING",
-      attempts: 0,
-      lastError: null,
-      createdAt: now,
-      sentAt: null,
-    });
-    return { ok: true as const, complaint: structuredClone(c), notificationId };
+    if (internalNote.trim()) addInternalNote(c, now, adminLabel, internalNote.trim());
+    await r.saveComplaint(c);
+    const notificationId = await queueNotification(
+      r,
+      c.id,
+      `📣 Update on ${c.ticketId}: ${STATUS_LABEL[to]}.` + (publicNote.trim() ? `\n${publicNote.trim()}` : "") + `\nTrack: ${trackUrl(c)}`,
+      now,
+    );
+    return { ok: true, complaint: c, notificationId };
   });
 }
 
-export function assignQueue(id: string, queue: string, adminLabel: string): Promise<ChangeResult | { ok: false; error: string }> {
-  return withStore((store) => {
-    const c = store.complaints.find((x) => x.id === id);
-    if (!c) return { ok: false as const, error: "Complaint not found." };
-    if (!ALL_QUEUES.includes(queue)) return { ok: false as const, error: "Unknown queue." };
-    if (from_isPendingAssignment(c)) return { ok: false as const, error: "Verify the suggested team first." };
+export function assignQueue(id: string, queue: string, adminLabel: string): Promise<ChangeResult> {
+  return withRepo(async (r): Promise<ChangeResult> => {
+    const c = await r.getComplaint(id, true);
+    if (!c) return { ok: false, error: "Complaint not found." };
+    if (!ALL_QUEUES.includes(queue)) return { ok: false, error: "Unknown queue." };
+    if (isPendingAssignment(c)) return { ok: false, error: "Verify the suggested team first." };
     c.queue = queue;
     if (c.assignment) c.assignment.finalTeam = teamIdFromLabel(queue);
     const now = new Date().toISOString();
     c.history.push({ status: c.status, note: `Moved to ${queue}.`, actor: "admin", at: now });
-    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: `Queue set to ${queue}` }];
-    return { ok: true as const, complaint: structuredClone(c), notificationId: "" };
+    addInternalNote(c, now, adminLabel, `Queue set to ${queue}`);
+    await r.saveComplaint(c);
+    return { ok: true, complaint: c, notificationId: "" };
   });
 }
 
 // --- Team verification ------------------------------------------------------------------------
 
-/** Legacy complaints (before assignments existed) are treated as pending while still TRIAGED. */
+/** Complaints from before team suggestions existed are treated as pending while still TRIAGED. */
 export function assignmentOf(c: Complaint): Assignment {
   if (c.assignment) return c.assignment;
   const team = teamIdFromLabel(c.queue);
@@ -287,7 +303,7 @@ export function assignmentOf(c: Complaint): Assignment {
   };
 }
 
-function from_isPendingAssignment(c: Complaint): boolean {
+function isPendingAssignment(c: Complaint): boolean {
   return c.status === "TRIAGED" && assignmentOf(c).state === "PENDING_VERIFICATION";
 }
 
@@ -306,17 +322,17 @@ export function verifyAssignment(
   adminLabel: string,
   trackUrl: (c: Complaint) => string,
 ): Promise<VerifyResult> {
-  return withStore((store) => {
-    const c = store.complaints.find((x) => x.id === id);
-    if (!c) return { ok: false as const, error: "Complaint not found." };
-    if (!from_isPendingAssignment(c)) return { ok: false as const, error: "This complaint is not waiting for team verification." };
+  return withRepo(async (r): Promise<VerifyResult> => {
+    const c = await r.getComplaint(id, true);
+    if (!c) return { ok: false, error: "Complaint not found." };
+    if (!isPendingAssignment(c)) return { ok: false, error: "This complaint is not waiting for team verification." };
 
     const current = assignmentOf(c);
     let finalTeam: TeamId = current.suggestedTeam as TeamId;
     let state: Assignment["state"] = "CONFIRMED";
     if (action === "correct") {
-      if (!isTeamId(team)) return { ok: false as const, error: "Choose a valid team." };
-      if (team === current.suggestedTeam) return { ok: false as const, error: "That is already the suggested team; use Confirm." };
+      if (!isTeamId(team)) return { ok: false, error: "Choose a valid team." };
+      if (team === current.suggestedTeam) return { ok: false, error: "That is already the suggested team; use Confirm." };
       finalTeam = team;
       state = "CORRECTED";
     }
@@ -331,55 +347,40 @@ export function verifyAssignment(
     };
     c.queue = TEAM_LABEL[finalTeam];
     c.status = "ASSIGNED";
-    c.history.push({
-      status: "ASSIGNED",
-      note: `Reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.`,
-      actor: "admin",
-      at: now,
-    });
-    c.internalNotes = [
-      ...(c.internalNotes ?? []),
-      {
-        at: now,
-        by: adminLabel,
-        text:
-          state === "CONFIRMED"
-            ? `Confirmed suggested team ${TEAM_LABEL[finalTeam]}`
-            : `Corrected team from ${TEAM_LABEL[current.suggestedTeam as TeamId]} to ${TEAM_LABEL[finalTeam]}${note.trim() ? `: ${note.trim()}` : ""}`,
-      },
-    ];
-    const notificationId = randomUUID();
-    store.notifications.push({
-      id: notificationId,
-      complaintId: c.id,
-      text:
-        `📣 Update on ${c.ticketId}: your report has been reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.` +
-        `
-Track: ${trackUrl(c)}`,
-      state: "PENDING",
-      attempts: 0,
-      lastError: null,
-      createdAt: now,
-      sentAt: null,
-    });
-    return { ok: true as const, complaint: structuredClone(c), notificationId };
+    c.history.push({ status: "ASSIGNED", note: `Reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.`, actor: "admin", at: now });
+    addInternalNote(
+      c,
+      now,
+      adminLabel,
+      state === "CONFIRMED"
+        ? `Confirmed suggested team ${TEAM_LABEL[finalTeam]}`
+        : `Corrected team from ${TEAM_LABEL[current.suggestedTeam as TeamId]} to ${TEAM_LABEL[finalTeam]}${note.trim() ? `: ${note.trim()}` : ""}`,
+    );
+    await r.saveComplaint(c);
+    const notificationId = await queueNotification(
+      r,
+      c.id,
+      `📣 Update on ${c.ticketId}: your report has been reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.\nTrack: ${trackUrl(c)}`,
+      now,
+    );
+    return { ok: true, complaint: c, notificationId };
   });
 }
 
 /** How often staff accepted the AI/rules team suggestion. Useful to judge how good it is. */
-export function assignmentStats(): Promise<{ pending: number; confirmed: number; corrected: number }> {
-  return withStore((s) => {
-    let pending = 0, confirmed = 0, corrected = 0;
-    for (const c of s.complaints) {
-      const st = assignmentOf(c).state;
-      if (st === "PENDING_VERIFICATION") {
-        if (c.status === "TRIAGED") pending++;
-      }
-      else if (st === "CONFIRMED") confirmed++;
-      else corrected++;
-    }
-    return { pending, confirmed, corrected };
-  });
+export async function assignmentStats(): Promise<{ pending: number; confirmed: number; corrected: number }> {
+  const all = await listAll();
+  let pending = 0;
+  let confirmed = 0;
+  let corrected = 0;
+  for (const c of all) {
+    const st = assignmentOf(c).state;
+    if (st === "PENDING_VERIFICATION") {
+      if (c.status === "TRIAGED") pending++;
+    } else if (st === "CONFIRMED") confirmed++;
+    else corrected++;
+  }
+  return { pending, confirmed, corrected };
 }
 
 // --- Linking a website complaint to a WhatsApp number -----------------------------------------
@@ -389,37 +390,36 @@ export function assignmentStats(): Promise<{ pending: number; confirmed: number;
  * WhatsApp number may receive updates for that complaint. Only unbound web complaints can be linked.
  */
 export function bindToSender(ticketId: string, token: string, senderKey: string, phone: string): Promise<Complaint | undefined> {
-  return withStore((s) => {
-    const c = s.complaints.find((x) => x.ticketId.toLowerCase() === ticketId.toLowerCase());
+  return withRepo(async (r) => {
+    const c = await r.getComplaintByTicket(ticketId, true);
     if (!c || c.trackingToken !== token) return undefined;
     if (!c.senderKey.startsWith("web:")) return undefined; // already linked to a real sender
     c.senderKey = senderKey;
     c.senderPhone = phone;
     c.history.push({ status: c.status, note: "WhatsApp updates switched on for this complaint.", actor: "citizen", at: new Date().toISOString() });
-    return structuredClone(c);
+    await r.saveComplaint(c);
+    return c;
   });
 }
 
 // --- Repair evidence --------------------------------------------------------------------------
 
 export function getRepairContext(id: string): Promise<{ status: ComplaintStatus; summary: string; before: string[]; shas: string[] } | undefined> {
-  return withStore((s) => {
-    const c = s.complaints.find((x) => x.id === id);
+  return withRepo(async (r) => {
+    const c = await r.getComplaint(id);
     if (!c) return undefined;
-    return { status: c.status, summary: c.summary || c.title, before: [...c.mediaFiles], shas: (c.repairChecks ?? []).map((r) => r.sha256) };
+    return { status: c.status, summary: c.summary || c.title, before: [...c.mediaFiles], shas: (c.repairChecks ?? []).map((x) => x.sha256) };
   });
 }
 
 export function addRepairCheck(id: string, check: RepairCheck): Promise<boolean> {
-  return withStore((s) => {
-    const c = s.complaints.find((x) => x.id === id);
+  return withRepo(async (r) => {
+    const c = await r.getComplaint(id, true);
     if (!c) return false;
     c.repairChecks = [...(c.repairChecks ?? []), check];
     c.history.push({ status: c.status, note: "Repair photo added by staff.", actor: "admin", at: check.at });
-    c.internalNotes = [
-      ...(c.internalNotes ?? []),
-      { at: check.at, by: check.uploadedBy, text: "Photo check (" + (check.aiProvider ?? "no AI") + "): " + check.verdict + ". " + check.reason },
-    ];
+    addInternalNote(c, check.at, check.uploadedBy, "Photo check (" + (check.aiProvider ?? "no AI") + "): " + check.verdict + ". " + check.reason);
+    await r.saveComplaint(c);
     return true;
   });
 }
@@ -436,54 +436,51 @@ export function linkDuplicate(
   adminLabel: string,
   trackUrl: (c: Complaint) => string,
 ): Promise<DuplicateResult> {
-  return withStore((store) => {
-    const c = store.complaints.find((x) => x.id === id);
-    if (!c) return { ok: false as const, error: "Complaint not found." };
-    if (!canTransition(c.status, "DUPLICATE")) return { ok: false as const, error: "This complaint can no longer be marked as a duplicate." };
-    const primary = store.complaints.find((x) => x.ticketId.toLowerCase() === primaryTicketId.toLowerCase());
-    if (!primary) return { ok: false as const, error: "Earlier report not found." };
-    if (primary.id === c.id) return { ok: false as const, error: "A report cannot be a duplicate of itself." };
-    if (primary.status === "DUPLICATE" || primary.duplicateOf) return { ok: false as const, error: "Link to the main report, not to another duplicate." };
-    if (primary.status === "REJECTED") return { ok: false as const, error: "Cannot link to a rejected report." };
+  return withRepo(async (r): Promise<DuplicateResult> => {
+    const c = await r.getComplaint(id, true);
+    if (!c) return { ok: false, error: "Complaint not found." };
+    if (!canTransition(c.status, "DUPLICATE")) return { ok: false, error: "This complaint can no longer be marked as a duplicate." };
+    const primary = await r.getComplaintByTicket(primaryTicketId, true);
+    if (!primary) return { ok: false, error: "Earlier report not found." };
+    if (primary.id === c.id) return { ok: false, error: "A report cannot be a duplicate of itself." };
+    if (primary.status === "DUPLICATE" || primary.duplicateOf) return { ok: false, error: "Link to the main report, not to another duplicate." };
+    if (primary.status === "REJECTED") return { ok: false, error: "Cannot link to a rejected report." };
 
     const now = new Date().toISOString();
     c.status = "DUPLICATE";
     c.duplicateReviewed = true;
     c.duplicateOf = { id: primary.id, ticketId: primary.ticketId, by: adminLabel, at: now, reason: note.trim() || "Same problem at the same spot." };
     c.history.push({ status: "DUPLICATE", note: "Linked to an earlier report of the same problem.", actor: "admin", at: now });
-    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: "Marked as duplicate of " + primary.ticketId + (note.trim() ? ": " + note.trim() : "") }];
-    primary.internalNotes = [...(primary.internalNotes ?? []), { at: now, by: adminLabel, text: c.ticketId + " was linked to this report as a duplicate" }];
+    addInternalNote(c, now, adminLabel, "Marked as duplicate of " + primary.ticketId + (note.trim() ? ": " + note.trim() : ""));
+    addInternalNote(primary, now, adminLabel, c.ticketId + " was linked to this report as a duplicate");
+    await r.saveComplaint(c);
+    await r.saveComplaint(primary);
 
-    const notificationId = randomUUID();
-    store.notifications.push({
-      id: notificationId,
-      complaintId: c.id,
-      text: "📣 Update on " + c.ticketId + ": it is the same problem as an earlier report, so staff linked them and will handle it together. Your complaint stays on record.\nTrack: " + trackUrl(c),
-      state: "PENDING",
-      attempts: 0,
-      lastError: null,
-      createdAt: now,
-      sentAt: null,
-    });
-    return { ok: true as const, complaint: structuredClone(c), notificationId };
+    const notificationId = await queueNotification(
+      r,
+      c.id,
+      "📣 Update on " + c.ticketId + ": it is the same problem as an earlier report, so staff linked them and will handle it together. Your complaint stays on record.\nTrack: " + trackUrl(c),
+      now,
+    );
+    return { ok: true, complaint: c, notificationId };
   });
 }
 
 /** Staff looked at the suggested matches and decided they are different problems. */
 export function dismissDuplicates(id: string, adminLabel: string): Promise<boolean> {
-  return withStore((store) => {
-    const c = store.complaints.find((x) => x.id === id);
+  return withRepo(async (r) => {
+    const c = await r.getComplaint(id, true);
     if (!c) return false;
     c.duplicateReviewed = true;
-    const now = new Date().toISOString();
-    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: "Reviewed possible duplicates: not the same problem" }];
+    addInternalNote(c, new Date().toISOString(), adminLabel, "Reviewed possible duplicates: not the same problem");
+    await r.saveComplaint(c);
     return true;
   });
 }
 
 /** Reports that staff linked to this one. */
 export function linkedReportsOf(id: string): Promise<Array<{ id: string; ticketId: string }>> {
-  return withStore((s) => s.complaints.filter((x) => x.duplicateOf?.id === id).map((x) => ({ id: x.id, ticketId: x.ticketId })));
+  return withRepo((r) => r.linkedTo(id));
 }
 
 export function needsDuplicateReview(c: Complaint): boolean {

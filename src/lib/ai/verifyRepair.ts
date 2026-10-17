@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import { z } from "zod";
 
 // Advisory before/after repair check. The model sees BOTH photos and gives an opinion; a staff
@@ -106,11 +105,11 @@ function list(envName: string, fallback: string): string[] {
 }
 
 export async function verifyRepair(
-  input: { beforePath: string; beforeMime: string; afterPath: string; afterMime: string; summary: string },
+  input: { before: Buffer; beforeMime: string; after: Buffer; afterMime: string; summary: string },
   log?: (entry: Record<string, unknown>) => void,
 ): Promise<RepairRun | null> {
-  const before: Img = { b64: (await readFile(input.beforePath)).toString("base64"), mime: input.beforeMime };
-  const after: Img = { b64: (await readFile(input.afterPath)).toString("base64"), mime: input.afterMime };
+  const before: Img = { b64: input.before.toString("base64"), mime: input.beforeMime };
+  const after: Img = { b64: input.after.toString("base64"), mime: input.afterMime };
 
   const attempts: Array<{ provider: "gemini" | "openai"; model: string }> = [];
   for (const p of list("AI_PROVIDER_ORDER", "gemini,openai")) {

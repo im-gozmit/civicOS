@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // The dev server blocks unknown hosts by default. Quick tunnels (used so Meta and your phone can
   // reach localhost) get a random *.trycloudflare.com name, so allow that family in development.
   allowedDevOrigins: ["*.trycloudflare.com"],
+  // Loaded at runtime instead of being bundled (the local development database ships WebAssembly).
+  serverExternalPackages: ["@electric-sql/pglite", "postgres"],
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,

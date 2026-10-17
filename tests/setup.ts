@@ -8,6 +8,7 @@ process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "civicos-test-"));
 process.env.SESSION_SECRET = "x".repeat(40);
 process.env.ADMIN_EMAIL = "admin@example.com";
 process.env.ADMIN_PASSWORD = "correct-horse-battery";
+process.env.PHONE_ENCRYPTION_KEY = "0123456789abcdef".repeat(4); // 64 hex chars, test only
 process.env.WHATSAPP_ACCESS_TOKEN = "";
 process.env.GEMINI_API_KEY = "";
 process.env.OPENAI_API_KEY = "";

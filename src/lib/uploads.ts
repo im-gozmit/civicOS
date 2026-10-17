@@ -1,7 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { MEDIA_DIR } from "@/lib/localStore";
+import { putFile } from "@/lib/storage";
 
 // Validates and stores files uploaded from the website. The file TYPE is decided from the file's
 // own first bytes, never from the file name or the browser-supplied content type, and the stored
@@ -41,8 +39,7 @@ async function save(file: File, maxBytes: number, sniff: (b: Buffer) => { ext: s
   const kind = sniff(buf);
   if (!kind) return { ok: false, error: `That ${label} format is not supported.` };
   const name = `${prefix}-${randomBytes(12).toString("hex")}.${kind.ext}`;
-  await mkdir(MEDIA_DIR, { recursive: true });
-  await writeFile(path.join(MEDIA_DIR, name), buf);
+  await putFile(name, buf, kind.mime);
   return { ok: true, file: name, mime: kind.mime, sha256: createHash("sha256").update(buf).digest("hex") };
 }
 

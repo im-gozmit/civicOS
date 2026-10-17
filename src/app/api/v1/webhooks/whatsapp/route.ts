@@ -1,8 +1,7 @@
 import { after, NextRequest } from "next/server";
 import { verifyMetaSignature } from "@/lib/whatsapp/signature";
 import { handleInbound } from "@/lib/whatsapp/conversation";
-import { logEvent, seenMessageId } from "@/lib/whatsapp/eventLog";
-
+import { claimMessage, logEvent } from "@/lib/events";
 
 // --- GET: Meta's one-time webhook verification handshake -------------------------------------
 export async function GET(req: NextRequest) {
@@ -49,8 +48,9 @@ export async function POST(req: NextRequest) {
     return new Response("Bad JSON", { status: 400 });
   }
 
-  // Always keep the raw payload while we are learning the real formats.
-  await logEvent({ raw: payload });
+  // Raw payloads contain phone numbers, so they are NOT logged. Set WEBHOOK_DEBUG=1 to print them
+  // to the console while debugging on your own machine.
+  if (process.env.WEBHOOK_DEBUG === "1") console.log("[wa-webhook] payload", raw);
 
   // Acknowledge fast; do the work after the response so Meta does not retry.
   after(async () => {
@@ -70,16 +70,19 @@ async function handlePayload(payload: unknown) {
     for (const change of entry.changes ?? []) {
       const value = change.value ?? {};
 
-      // Delivery/read/failure callbacks for messages we sent: just record them.
+      // Delivery/read/failure callbacks for messages we sent. Only the outcome is logged (no
+      // phone numbers), and only failures carry an error.
       if (Array.isArray(value.statuses)) {
-        await logEvent({ statuses: value.statuses });
+        for (const s of value.statuses as Array<{ status?: string; errors?: Array<{ code?: number; title?: string }> }>) {
+          logEvent({ delivery: { status: s.status, errors: s.errors?.map((e) => ({ code: e.code, title: e.title })) } });
+        }
       }
 
       const contacts = (value.contacts as Array<{ user_id?: string }> | undefined) ?? [];
       const messages = (value.messages as WaMessage[] | undefined) ?? [];
       for (const msg of messages) {
-        if (await seenMessageId(msg.id)) continue; // Meta redelivers; process each id once
-        await logEvent({ processed: msg.id, type: msg.type });
+        if (!(await claimMessage(msg.id))) continue; // Meta redelivers; act on each message id once
+        logEvent({ received: msg.type });
         await handleInbound({
           id: msg.id,
           from: msg.from,
