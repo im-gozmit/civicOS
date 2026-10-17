@@ -1,8 +1,6 @@
-import path from "path";
-import { MEDIA_DIR, withStore } from "@/lib/localStore";
-import { CATEGORY_LABEL, createComplaint, fallbackAnalysis, getOwnByTicket, listForSender, resolveTeam } from "@/lib/complaints";
-import type { Analysis } from "@/lib/complaints";
-import { runTriage } from "@/lib/ai/triage";
+import { withStore } from "@/lib/localStore";
+import { CATEGORY_LABEL, bindToSender, getOwnByTicket, listForSender } from "@/lib/complaints";
+import { processReport } from "@/lib/reportPipeline";
 import { sendLocationRequest, sendText } from "@/lib/whatsapp/cloud";
 import { downloadMedia } from "@/lib/whatsapp/media";
 import { logEvent } from "@/lib/whatsapp/eventLog";
@@ -109,81 +107,36 @@ function saveConversation(conv: Conversation) {
   });
 }
 
-function mimeFor(file: string) {
-  return /\.png$/i.test(file) ? "image/png" : /\.webp$/i.test(file) ? "image/webp" : "image/jpeg";
-}
-
-/** Runs AI triage; returns the analysis to register, or a rejection message to send instead. */
-async function analyse(pending: PendingReport): Promise<{ analysis: Analysis } | { rejection: string }> {
-  const run = await runTriage(
-    { imagePath: path.join(MEDIA_DIR, pending.mediaFiles[0]), mimeType: mimeFor(pending.mediaFiles[0]), caption: pending.caption },
-    (e) => void logEvent(e),
-  ).catch((err) => {
-    console.error("[conversation] triage failed", err);
-    return null;
-  });
-  if (!run) return { analysis: fallbackAnalysis(pending.caption) };
-
-  const r = run.result;
-  if (!r.isCivicIssue) {
-    return {
-      rejection:
-        "I could not see a public civic problem in that photo, so I did not register a complaint.\n" +
-        `What I saw: ${r.summaryEn}\n\n` +
-        "Please send a clear photo of the problem (pothole, garbage, blocked drain, water leak, broken street light).\n" +
-        "इस फ़ोटो में कोई सार्वजनिक समस्या नहीं दिखी। कृपया समस्या की साफ़ फ़ोटो भेजें।",
-    };
-  }
-  if (r.photoQuality === "UNUSABLE") {
-    return { rejection: "That photo is too unclear to use. Please send a clearer photo of the problem. / कृपया साफ़ फ़ोटो भेजें।" };
-  }
-  return {
-    analysis: {
-      category: r.issueType,
-      title: r.titleEn,
-      summary: r.summaryEn,
-      severity: r.severity,
-      hazards: r.hazards,
-      suggestedTeam: resolveTeam(r.issueType, r.suggestedTeam),
-      teamReason: r.teamReason,
-      teamSource: "ai",
-      needsHumanReview: r.needsHumanReview || r.photoQuality === "POOR" || !r.captionConsistentWithPhoto,
-      reviewReason: r.reviewReason,
-      aiProvider: run.provider,
-      aiModel: run.model,
-    },
-  };
-}
-
 async function register(conv: Conversation, pending: PendingReport, latitude: number, longitude: number) {
   await reply(conv.phone, "🔎 Analysing your photo, this takes about 15 seconds…");
-  const outcome = await analyse(pending);
-  if ("rejection" in outcome) {
-    conv.pending = undefined;
-    conv.state = "IDLE";
-    conv.lastLocation = undefined;
-    await saveConversation(conv);
-    await reply(conv.phone, outcome.rejection);
-    return;
-  }
-  const complaint = await createComplaint(
-    {
-      source: "whatsapp",
-      senderKey: conv.senderKey,
-      senderPhone: conv.phone,
-      caption: pending.caption,
-      latitude,
-      longitude,
-      mediaFiles: pending.mediaFiles,
-      audioFiles: pending.audioFiles,
-    },
-    outcome.analysis,
-  );
+  const result = await processReport({
+    source: "whatsapp",
+    senderKey: conv.senderKey,
+    senderPhone: conv.phone,
+    caption: pending.caption,
+    mediaFiles: pending.mediaFiles,
+    audioFiles: pending.audioFiles,
+    latitude,
+    longitude,
+  });
   conv.pending = undefined;
   conv.state = "IDLE";
   conv.lastLocation = undefined; // each report needs its own location
   await saveConversation(conv);
-  await reply(conv.phone, successMessage(complaint));
+
+  if (!result.ok) {
+    await reply(
+      conv.phone,
+      result.code === "NOT_CIVIC"
+        ? "I could not see a public civic problem in that photo, so I did not register a complaint.\n" +
+            `What I saw: ${result.seen}\n\n` +
+            "Please send a clear photo of the problem (pothole, garbage, blocked drain, water leak, broken street light).\n" +
+            "इस फ़ोटो में कोई सार्वजनिक समस्या नहीं दिखी। कृपया समस्या की साफ़ फ़ोटो भेजें।"
+        : "That photo is too unclear to use. Please send a clearer photo of the problem. / कृपया साफ़ फ़ोटो भेजें।",
+    );
+    return;
+  }
+  await reply(conv.phone, successMessage(result.complaint));
 }
 
 async function processMessage(msg: InboundMessage) {
@@ -258,6 +211,19 @@ async function processMessage(msg: InboundMessage) {
 
     case "text": {
       const text = (msg.text ?? "").trim();
+
+      // "TRACK CIV-000012 <token>" from the website's "Get updates on WhatsApp" button.
+      const trackMatch = text.match(/^track\s+(CIV-\d+)\s+([A-Za-z0-9_-]{16,64})\s*$/i);
+      if (trackMatch) {
+        const c = await bindToSender(trackMatch[1], trackMatch[2], conv.senderKey, conv.phone);
+        await reply(
+          conv.phone,
+          c
+            ? `✅ WhatsApp updates are on for ${c.ticketId}. We will message you when staff update it.\nTrack: ${trackUrl(c)}`
+            : "I could not link that complaint. Check you sent the whole message from the website; it may already be linked.",
+        );
+        return;
+      }
 
       const statusMatch = text.match(/^status\s+(CIV-\d+)/i);
       if (statusMatch) {

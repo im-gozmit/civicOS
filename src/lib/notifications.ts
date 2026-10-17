@@ -20,7 +20,7 @@ export async function deliverNotification(notificationId: string): Promise<void>
       if (!n || n.state !== "PENDING") return null;
       const c = store.complaints.find((x) => x.id === n.complaintId);
       const conv = c ? store.conversations[c.senderKey] : undefined;
-      if (!c || c.source !== "whatsapp" || !conv) {
+      if (!c || !conv) {
         n.state = "FAILED";
         n.lastError = "NO_WHATSAPP_RECIPIENT";
         return null;

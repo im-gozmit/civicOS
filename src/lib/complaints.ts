@@ -355,3 +355,21 @@ export function assignmentStats(): Promise<{ pending: number; confirmed: number;
     return { pending, confirmed, corrected };
   });
 }
+
+// --- Linking a website complaint to a WhatsApp number -----------------------------------------
+
+/**
+ * "TRACK CIV-000012 <token>" sent to the bot proves the sender holds the tracking link, so their
+ * WhatsApp number may receive updates for that complaint. Only unbound web complaints can be linked.
+ */
+export function bindToSender(ticketId: string, token: string, senderKey: string, phone: string): Promise<Complaint | undefined> {
+  return withStore((s) => {
+    const c = s.complaints.find((x) => x.ticketId.toLowerCase() === ticketId.toLowerCase());
+    if (!c || c.trackingToken !== token) return undefined;
+    if (!c.senderKey.startsWith("web:")) return undefined; // already linked to a real sender
+    c.senderKey = senderKey;
+    c.senderPhone = phone;
+    c.history.push({ status: c.status, note: "WhatsApp updates switched on for this complaint.", actor: "citizen", at: new Date().toISOString() });
+    return structuredClone(c);
+  });
+}
