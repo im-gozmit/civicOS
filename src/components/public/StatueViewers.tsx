@@ -35,21 +35,21 @@ export function TiltStatue({ src }: { src: string }) {
     const r = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width - 0.5;
     const y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.transform = `perspective(900px) rotateY(${x * 10}deg) rotateX(${-y * 5}deg) scale(1.06)`;
+    el.style.transform = `perspective(900px) rotateY(${x * 10}deg) rotateX(${-y * 5}deg)`;
   }
   function leave() {
     if (ref.current) ref.current.style.transform = "";
   }
   return (
-    <div className="overflow-hidden" onPointerMove={move} onPointerLeave={leave}>
+    <div onPointerMove={move} onPointerLeave={leave}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={ref}
         src={src}
         alt="Statue of Chandra Shekhar Azad in Azad Park, Prayagraj"
-        width={800}
+        width={424}
         height={1200}
-        className="block aspect-[2/3] w-full object-cover transition-transform duration-300 ease-out will-change-transform"
+        className="block h-auto w-full drop-shadow-[6px_8px_0_rgb(26_23_19/0.18)] transition-transform duration-300 ease-out will-change-transform"
       />
     </div>
   );
