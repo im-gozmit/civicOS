@@ -377,31 +377,26 @@ html[data-view="classic"] .hero-card .wa-step {
 */
 @media (min-width: 885px) {
   .phone-side {
-    zoom: 0.85;
+    zoom: 0.64;
   }
 }
 @media (min-width: 1180px) {
   .phone-side {
-    zoom: 1.02;
+    zoom: 0.77;
   }
 }
 @media (min-width: 1400px) {
   .phone-side {
-    zoom: 1.2;
+    zoom: 0.9;
   }
 }
 @media (min-width: 1550px) {
   .phone-side {
-    zoom: 1.35;
+    zoom: 1.01;
   }
 }
 @media (min-width: 1700px) {
   .phone-side {
-    zoom: 1.5;
+    zoom: 1.125;
   }
 }
-
-
-
-
-
