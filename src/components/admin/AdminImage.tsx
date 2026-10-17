@@ -7,7 +7,7 @@ import { ImageOff, RefreshCw } from "lucide-react";
  * A private evidence photo. If it cannot be shown, say why (signed out, missing from storage, server error)
  * instead of leaving an empty box, and let staff retry without reloading the page.
  */
-export function AdminImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+export function AdminImage({ src, alt, className, audience = "staff" }: { src: string; alt: string; className?: string; audience?: "staff" | "citizen" }) {
   const [attempt, setAttempt] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -15,6 +15,7 @@ export function AdminImage({ src, alt, className }: { src: string; alt: string; 
     try {
       const res = await fetch(src, { cache: "no-store" });
       if (res.ok) return setProblem("The photo exists but this browser could not draw it. Try Retry, or open it in a new tab.");
+      if (audience === "citizen") return setProblem("This photo could not be loaded right now. You can try again.");
       setProblem(
         res.status === 401
           ? "Your staff session has ended. Sign in again."

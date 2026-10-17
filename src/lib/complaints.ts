@@ -80,8 +80,8 @@ export function fallbackAnalysis(caption: string): Analysis {
 
 // --- Small helpers ----------------------------------------------------------------------------
 
-async function queueNotification(r: Repo, complaintId: string, text: string, now: string): Promise<string> {
-  const n: Notification = { id: randomUUID(), complaintId, text, state: "PENDING", attempts: 0, lastError: null, createdAt: now, sentAt: null };
+async function queueNotification(r: Repo, complaintId: string, title: string, text: string, now: string): Promise<string> {
+  const n: Notification = { id: randomUUID(), complaintId, title, text, state: "PENDING", attempts: 0, lastError: null, createdAt: now, sentAt: null };
   await r.insertNotification(n);
   return n.id;
 }
@@ -268,6 +268,7 @@ export function changeStatus(
     const notificationId = await queueNotification(
       r,
       c.id,
+      `Status: ${STATUS_LABEL[to]}`,
       `📣 Update on ${c.ticketId}: ${STATUS_LABEL[to]}.` + (publicNote.trim() ? `\n${publicNote.trim()}` : "") + `\nTrack: ${trackUrl(c)}`,
       now,
     );
@@ -366,6 +367,7 @@ export function verifyAssignment(
     const notificationId = await queueNotification(
       r,
       c.id,
+      `Team confirmed: ${TEAM_LABEL[finalTeam]}`,
       `📣 Update on ${c.ticketId}: your report has been reviewed by staff and assigned to ${TEAM_LABEL[finalTeam]}.\nTrack: ${trackUrl(c)}`,
       now,
     );
@@ -465,6 +467,7 @@ export function linkDuplicate(
     const notificationId = await queueNotification(
       r,
       c.id,
+      "Linked to an earlier report",
       "📣 Update on " + c.ticketId + ": it is the same problem as an earlier report, so staff linked them and will handle it together. Your complaint stays on record.\nTrack: " + trackUrl(c),
       now,
     );

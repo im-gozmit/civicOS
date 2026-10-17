@@ -9,6 +9,7 @@ import type { TeamId } from "@/lib/teams";
 import { NEEDS_REASON, STATUS_LABEL, TRANSITIONS } from "@/lib/transitions";
 import { DuplicateCard, EvidenceForm, QueueForm, StatusForm, VerifyTeamCard } from "@/components/admin/ActionForms";
 import { AdminImage } from "@/components/admin/AdminImage";
+import { notificationBody, notificationTitle } from "@/lib/notificationTitle";
 import { jurisdictionFacts } from "@/components/public/jurisdictionFacts";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { SeverityBadge, StatusBadge } from "@/components/ui/StatusBadge";
@@ -256,22 +257,29 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           ) : null}
 
           <Panel title="WhatsApp updates sent to the citizen" icon={<Bell className="h-4 w-4 text-slate-500" />}>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {notifications.length === 0 ? <li className="text-slate-500">None yet.</li> : null}
               {notifications.map((n) => (
-                <li key={n.id} className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                      n.state === "SENT"
-                        ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                        : n.state === "FAILED"
-                          ? "bg-rose-50 text-rose-800 ring-rose-200"
-                          : "bg-amber-50 text-amber-800 ring-amber-200"
-                    }`}
-                  >
-                    {n.state}
-                  </span>
-                  {n.lastError ? <span className="text-slate-500">{n.lastError}</span> : null}
+                <li key={n.id} className="rounded-xl bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                        n.state === "SENT"
+                          ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                          : n.state === "FAILED"
+                            ? "bg-rose-50 text-rose-800 ring-rose-200"
+                            : "bg-amber-50 text-amber-800 ring-amber-200"
+                      }`}
+                    >
+                      {n.state}
+                    </span>
+                    <span className="font-semibold text-slate-900">{notificationTitle(n)}</span>
+                  </div>
+                  <p className="mt-1.5 whitespace-pre-line text-slate-600">{notificationBody(n.text)}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {n.state === "SENT" && n.sentAt ? `Sent ${when(n.sentAt)}` : `Created ${when(n.createdAt)}`}
+                  </p>
+                  {n.lastError ? <p className="mt-1 text-xs text-slate-500">{n.lastError}</p> : null}
                 </li>
               ))}
             </ul>

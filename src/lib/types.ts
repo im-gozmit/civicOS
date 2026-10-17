@@ -121,6 +121,7 @@ export interface PendingReport {
 export interface Notification {
   id: string;
   complaintId: string;
+  title?: string; // short label for staff, such as "Status: In progress" (older notifications have none)
   text: string;
   state: "PENDING" | "SENT" | "FAILED";
   attempts: number;

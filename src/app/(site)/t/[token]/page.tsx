@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Info, ShieldCheck } from "lucide-react";
 import { CATEGORY_LABEL, getByToken } from "@/lib/complaints";
 import { STATUS_LABEL } from "@/lib/transitions";
 import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
+import { BeforeAfter } from "@/components/public/BeforeAfter";
 import { jurisdictionFacts } from "@/components/public/jurisdictionFacts";
 import { statusTone } from "@/components/ui/StatusBadge";
 import type { ComplaintStatus } from "@/lib/types";
@@ -61,6 +62,7 @@ async function Tracker({ params }: { params: Promise<{ token: string }> }) {
       }
       title={severity ? `${CATEGORY_LABEL[c.category]} reported, ${severity} priority` : c.title}
       description={c.summary}
+      media={<BeforeAfter token={token} before={c.mediaFiles.filter((f) => /.(jpg|png|webp)$/i.test(f))} after={(c.repairChecks ?? []).map((r) => ({ file: r.file, at: r.at }))} reportedAt={c.createdAt} />}
       timeline={timeline}
       facts={[
         { label: "Issue ID", value: <span className="font-mono">{c.ticketId}</span> },
