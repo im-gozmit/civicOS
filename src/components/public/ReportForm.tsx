@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import type { LatLng } from "@/components/public/LocationPicker";
+import { AgentReport, AgentTerminal } from "@/components/public/AgentTerminal";
 import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
 
 // Leaflet needs the browser, so the map is loaded on the client only.
@@ -125,6 +126,7 @@ interface Success {
   trackingUrl: string;
   summary: string;
   category: string;
+  severity?: string | null;
   suggestedTeam: string;
   voiceHeard?: string | null;
   similarNearby?: boolean;
@@ -173,6 +175,8 @@ export function ReportForm() {
   const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+  // True for a moment after the server answers, so the agent terminal can tick every line before the result shows.
+  const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seen, setSeen] = useState<string | null>(null);
   const [done, setDone] = useState<Success | null>(null);
@@ -253,6 +257,8 @@ export function ReportForm() {
       const res = await fetch("/api/v1/reports", { method: "POST", body });
       const data = (await res.json().catch(() => null)) as (Success & { ok?: boolean; error?: string; seen?: string }) | null;
       if (res.ok && data?.ok) {
+        setFinishing(true);
+        await new Promise((r) => setTimeout(r, 1100));
         setDone(data);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
@@ -263,6 +269,7 @@ export function ReportForm() {
       setError("Network problem. Please try again.");
     } finally {
       setBusy(false);
+      setFinishing(false);
     }
   }
 
@@ -341,6 +348,8 @@ export function ReportForm() {
           </dl>
         </div>
 
+        <AgentReport lang={lang} result={done} />
+
         <div className="grid gap-3">
           <a href={done.trackingUrl} className="btn btn-primary w-full py-3.5 text-base">
             {t.track}
@@ -357,6 +366,9 @@ export function ReportForm() {
       </div>
     );
   }
+
+  /* ------------------------------------------------------------- agents working */
+  if (busy) return <AgentTerminal lang={lang} hasVoice={!!voice} finishing={finishing} />;
 
   /* --------------------------------------------------------------------- form */
   return (
