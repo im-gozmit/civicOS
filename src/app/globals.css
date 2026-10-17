@@ -40,11 +40,11 @@
   --color-teal-800: #882913;
   --color-teal-900: #6e2613;
   --color-teal-950: #3c1007;
-  --breakpoint-sm: 64rem;
-  --breakpoint-md: 76.8rem;
-  --breakpoint-lg: 102.4rem;
-  --breakpoint-xl: 128rem;
-  --breakpoint-2xl: 153.6rem;
+  --breakpoint-sm: 57.6rem;
+  --breakpoint-md: 69.12rem;
+  --breakpoint-lg: 92.16rem;
+  --breakpoint-xl: 115.2rem;
+  --breakpoint-2xl: 138.24rem;
 }
 
 @theme inline {
@@ -61,17 +61,17 @@
 }
 
 /*
-  Desktop zoom: on screens at least 768px wide the whole page is drawn at 160%, like a 160% browser
+  Desktop zoom: on screens at least 768px wide the whole page is drawn at 144%, like a 144% browser
   zoom (the look the owner prefers), so people do not have to zoom in by hand. The responsive breakpoints in
-  @theme below are scaled by the same 1.6 to match: the layout then behaves as if the window were half as wide,
+  @theme below are scaled by the same 1.44 to match: the layout then behaves as if the window were half as wide,
   exactly as with a real browser zoom. Phones and narrow windows are not scaled.
 */
 @media (min-width: 768px) {
   html {
-    zoom: 1.6;
+    zoom: 1.44;
   }
   :root {
-    --vh: 0.625vh;
+    --vh: 0.694vh;
   }
 }
 
@@ -258,16 +258,6 @@ html[data-view="classic"] .hero {
 html[data-view="classic"] .hero-bg,
 html[data-view="classic"] .hero-wash {
   display: none;
-}
-html[data-view="classic"] .hero-pill {
-  border-color: var(--ink);
-  background: var(--paper);
-  color: var(--ink);
-  backdrop-filter: none;
-  box-shadow: 3px 3px 0 0 var(--ink);
-}
-html[data-view="classic"] .hero-pill svg {
-  color: #cf3d0f;
 }
 html[data-view="classic"] .hero-h1 {
   color: var(--ink);

@@ -10,7 +10,6 @@ import {
   Languages,
   Lightbulb,
   Lock,
-  MapPin,
   MessageCircle,
   Send,
   ShieldCheck,
@@ -101,16 +100,8 @@ export default function Home() {
         <div className="hero-wash absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" aria-hidden />
 
         <div className="container-page relative grid min-h-[36rem] items-end gap-10 pt-24 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="animate-rise self-center pb-14 lg:pb-20">
-            <div className="flex flex-wrap items-center gap-2">
-            <p className="hero-pill inline-flex items-center gap-2 rounded-md border border-white/70 bg-black/30 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
-              <MapPin className="h-4 w-4 text-amber-300" /> Prayagraj <span lang="hi" className="font-[family-name:var(--font-deva)] normal-case tracking-normal">(प्रयागराज)</span> &middot; demo service
-            </p>
-            <p className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
-              <Timer className="h-4 w-4" /> WhatsApp complaint in under 60 seconds
-            </p>
-          </div>
-            <h1 className="hero-h1 mt-6 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
+          <div className="animate-rise self-start pb-14 lg:pb-20">
+            <h1 className="hero-h1 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
               Spotted a civic problem?
               <span className="hero-accent mt-2 block italic text-orange-500">
                 Report it in a{" "}
