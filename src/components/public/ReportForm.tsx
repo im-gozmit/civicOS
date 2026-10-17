@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { LatLng } from "@/components/public/LocationPicker";
+import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
 
 // Leaflet needs the browser, so the map is loaded on the client only.
 const LocationPicker = dynamic(() => import("@/components/public/LocationPicker").then((m) => m.LocationPicker), {
@@ -93,22 +94,6 @@ interface Success {
   whatsappLink: string | null;
 }
 
-/** Shrinks big phone photos in the browser so the upload is small and fast on slow networks. */
-async function downscale(file: File, maxSide = 1600): Promise<File> {
-  try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext("2d")?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.85));
-    return blob ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
-  } catch {
-    return file; // the server still validates whatever we send
-  }
-}
-
 export function ReportForm() {
   const [lang, setLang] = useState<Lang>("en");
   const t = T[lang];
@@ -180,7 +165,12 @@ export function ReportForm() {
     setBusy(true);
     try {
       const body = new FormData();
-      body.set("photo", await downscale(photo));
+      const small = await downscaleImage(photo);
+      if (small.size > MAX_UPLOAD_BYTES) {
+        setError(uploadErrorMessage(413));
+        return;
+      }
+      body.set("photo", small);
       body.set("description", description);
       body.set("landmark", landmark);
       body.set("latitude", String(loc.lat));
@@ -190,7 +180,7 @@ export function ReportForm() {
       const data = (await res.json().catch(() => null)) as (Success & { ok?: boolean; error?: string; seen?: string }) | null;
       if (res.ok && data?.ok) setDone(data);
       else {
-        setError(data?.error ?? "Something went wrong. Please try again.");
+        setError(uploadErrorMessage(res.status, data?.error));
         if (data?.seen) setSeen(data.seen);
       }
     } catch {

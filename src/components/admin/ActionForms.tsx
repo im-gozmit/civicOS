@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
 
 interface StatusOption {
   value: string;
@@ -214,12 +215,26 @@ export function EvidenceForm({ id }: { id: string }) {
     setBusy(true);
     setError(null);
     const body = new FormData();
-    body.set("photo", file);
-    const res = await fetch(`/api/v1/admin/complaints/${id}/evidence`, { method: "POST", body });
+    // Phone photos are often over the 4.5 MB request limit, so shrink before sending.
+    const small = await downscaleImage(file);
+    if (small.size > MAX_UPLOAD_BYTES) {
+      setBusy(false);
+      setError(uploadErrorMessage(413));
+      return;
+    }
+    body.set("photo", small);
+    let res: Response;
+    try {
+      res = await fetch(`/api/v1/admin/complaints/${id}/evidence`, { method: "POST", body });
+    } catch {
+      setBusy(false);
+      setError("Network problem. Please check your connection and try again.");
+      return;
+    }
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     setBusy(false);
     if (!res.ok) {
-      setError(data?.error ?? "Upload failed.");
+      setError(uploadErrorMessage(res.status, data?.error));
       return;
     }
     setFile(null);
