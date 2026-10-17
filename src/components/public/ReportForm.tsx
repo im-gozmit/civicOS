@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Copy,
   ImagePlus,
-  Info,
   Loader2,
   Mic,
   MessageCircle,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import type { LatLng } from "@/components/public/LocationPicker";
 import { AgentReport, AgentTerminal } from "@/components/public/AgentTerminal";
+import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
 import { MAX_UPLOAD_BYTES, downscaleImage, uploadErrorMessage } from "@/lib/clientImage";
 
 // Leaflet needs the browser, so the map is loaded on the client only.
@@ -181,6 +181,7 @@ export function ReportForm() {
   const [seen, setSeen] = useState<string | null>(null);
   const [done, setDone] = useState<Success | null>(null);
   const [copied, setCopied] = useState(false);
+  const [reportedAt, setReportedAt] = useState<string>("");
   const recorder = useRef<MediaRecorder | null>(null);
 
   function choosePhoto(file: File | null) {
@@ -259,6 +260,7 @@ export function ReportForm() {
       if (res.ok && data?.ok) {
         setFinishing(true);
         await new Promise((r) => setTimeout(r, 1100));
+        setReportedAt(new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }));
         setDone(data);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
@@ -302,67 +304,80 @@ export function ReportForm() {
 
   /* ------------------------------------------------------------------ success */
   if (done) {
+    const severity = done.severity ? done.severity.charAt(0) + done.severity.slice(1).toLowerCase() : null;
+    const en = lang === "en";
     return (
-      <div className="mx-auto max-w-xl space-y-5">
-        <div className="card animate-rise overflow-hidden">
-          <div className="bg-gradient-to-br from-teal-600 to-teal-700 px-6 py-8 text-center text-white">
-            <span className="animate-pop mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 ring-8 ring-white/10">
-              <CheckCircle2 className="h-9 w-9" />
-            </span>
-            <h2 className="mt-4 text-2xl font-extrabold">{t.done}</h2>
-            <p className="mt-1 text-sm text-teal-50">{t.ticket}</p>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-slate-900 shadow-sm">
-              <span className="font-mono text-2xl font-extrabold tracking-wide">{done.ticketId}</span>
-              <button type="button" onClick={copyTicket} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label={t.copy}>
-                {copied ? <Check className="h-4 w-4 text-teal-600" /> : <Copy className="h-4 w-4" />}
+      <div className="space-y-6">
+        <div className="mx-auto flex max-w-5xl animate-rise flex-wrap items-center gap-3 rounded-xl border-2 border-slate-900 bg-emerald-100 px-4 py-3 shadow-[3px_3px_0_0_var(--ink)]">
+          <span className="animate-pop flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+            <CheckCircle2 className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-lg font-extrabold leading-tight text-slate-900">{t.done}</p>
+            <p className="text-sm text-slate-700">{en ? "Keep your complaint number. It is also your tracking reference." : "अपना शिकायत नंबर सुरक्षित रखें। यही आपका ट्रैकिंग नंबर है।"}</p>
+          </div>
+          <p role="status" className="text-xs font-semibold text-emerald-900">
+            {copied ? t.copied : ""}
+          </p>
+        </div>
+
+        <IssueTimelineView
+          chips={
+            <>
+              <Chip tone="ink">
+                {done.ticketId}
+                <button type="button" onClick={copyTicket} className="-mr-1 rounded p-0.5 text-white/80 hover:bg-white/20 hover:text-white" aria-label={t.copy}>
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </Chip>
+              <Chip>{en ? "Agent classified" : "एजेंट वर्गीकृत"}</Chip>
+              {severity ? <Chip tone={severityTone(done.severity)}>{"●"} {severity}</Chip> : null}
+            </>
+          }
+          title={severity ? (en ? `${done.category} reported, ${severity} priority` : `${done.category} दर्ज, ${severity} प्राथमिकता`) : en ? `${done.category} reported` : `${done.category} दर्ज`}
+          description={done.summary}
+          media={
+            preview ? (
+              <figure>
+                <figcaption className="mb-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{en ? "Reported" : "रिपोर्ट की गई"}</figcaption>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={preview} alt={en ? "The photo you sent" : "आपकी भेजी हुई फ़ोटो"} className="max-h-60 w-full max-w-xs rounded-xl border-2 border-slate-900 object-cover shadow-[4px_4px_0_0_var(--ink)]" />
+              </figure>
+            ) : null
+          }
+          timeline={[
+            { title: en ? "Citizen reported" : "नागरिक ने रिपोर्ट किया", meta: reportedAt, state: "done" },
+            { title: en ? `Agents classified and suggested ${done.suggestedTeam}` : `एजेंटों ने वर्गीकृत किया और ${done.suggestedTeam} सुझाया`, meta: reportedAt, state: "done" },
+            { title: en ? "Staff verify the team" : "स्टाफ टीम की पुष्टि करेगा", note: en ? "Nothing is promised until a person has checked it." : "किसी व्यक्ति के जाँचने तक कोई वादा नहीं किया जाता।", state: "pending" },
+          ]}
+          facts={[
+            { label: en ? "Issue ID" : "शिकायत नंबर", value: <span className="font-mono">{done.ticketId}</span> },
+            { label: en ? "Category" : "श्रेणी", value: done.category },
+            { label: en ? "Suggested team" : "सुझाई गई टीम", value: done.suggestedTeam, note: t.suggestedNote },
+            { label: en ? "Status" : "स्थिति", value: en ? "Registered, awaiting staff review" : "दर्ज, स्टाफ समीक्षा बाकी" },
+            ...(loc ? [{ label: en ? "Location" : "लोकेशन", value: <span className="font-mono">{loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}</span> }] : []),
+            { label: en ? "Similar reports nearby" : "आस-पास मिलती रिपोर्ट", value: done.similarNearby ? (en ? "Yes, staff will link them if it is the same" : "हाँ, एक जैसी होने पर स्टाफ जोड़ेगा") : en ? "None yet" : "अभी नहीं" },
+            ...(done.voiceHeard ? [{ label: t.heard, value: done.voiceHeard }] : []),
+            ...(done.needsHumanReview ? [{ label: en ? "Review" : "समीक्षा", value: t.needsReview }] : []),
+          ]}
+          aside={
+            <div className="grid gap-2 pt-2">
+              <a href={done.trackingUrl} className="btn btn-primary w-full py-3">
+                {t.track}
+              </a>
+              {done.whatsappLink ? (
+                <a href={done.whatsappLink} className="btn btn-whatsapp w-full py-3">
+                  <MessageCircle className="h-5 w-5" /> {t.whatsapp}
+                </a>
+              ) : null}
+              <button type="button" className="btn btn-ghost w-full" onClick={() => window.location.reload()}>
+                <RefreshCw className="h-4 w-4" /> {t.another}
               </button>
             </div>
-            <p className="mt-2 h-4 text-xs text-teal-100" role="status">
-              {copied ? t.copied : ""}
-            </p>
-          </div>
-
-          <dl className="space-y-4 p-6 text-sm">
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{done.category}</dt>
-              <dd className="mt-1 text-base leading-relaxed text-slate-800">{done.summary}</dd>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.suggested}</dt>
-              <dd className="mt-1 font-semibold text-slate-900">{done.suggestedTeam}</dd>
-              <dd className="mt-1 text-slate-500">{t.suggestedNote}</dd>
-            </div>
-            {done.voiceHeard ? (
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.heard}</dt>
-                <dd className="mt-1 text-slate-700">{done.voiceHeard}</dd>
-              </div>
-            ) : null}
-            {done.similarNearby ? (
-              <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
-                <Info className="mt-0.5 h-5 w-5 shrink-0" />
-                <p>{t.similar}</p>
-              </div>
-            ) : null}
-            {done.needsHumanReview ? <p className="text-slate-500">{t.needsReview}</p> : null}
-          </dl>
-        </div>
-
-        <AgentReport lang={lang} result={done} />
-
-        <div className="grid gap-3">
-          <a href={done.trackingUrl} className="btn btn-primary w-full py-3.5 text-base">
-            {t.track}
-          </a>
-          {done.whatsappLink ? (
-            <a href={done.whatsappLink} className="btn btn-whatsapp w-full py-3.5 text-base">
-              <MessageCircle className="h-5 w-5" /> {t.whatsapp}
-            </a>
-          ) : null}
-          <button type="button" className="btn btn-ghost w-full" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4" /> {t.another}
-          </button>
-        </div>
+          }
+        >
+          <AgentReport lang={lang} result={done} />
+        </IssueTimelineView>
       </div>
     );
   }

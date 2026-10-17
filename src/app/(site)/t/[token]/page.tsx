@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { AlertTriangle, Check, Info, MapPin, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Check, Info, ShieldCheck } from "lucide-react";
 import { CATEGORY_LABEL, getByToken } from "@/lib/complaints";
 import { STATUS_LABEL } from "@/lib/transitions";
-import { CategoryIcon } from "@/components/ui/CategoryIcon";
-import { SeverityBadge, StatusBadge, statusTone } from "@/components/ui/StatusBadge";
-import type { Complaint, ComplaintStatus } from "@/lib/types";
+import { Chip, IssueTimelineView, severityTone } from "@/components/public/IssueTimelineView";
+import { statusTone } from "@/components/ui/StatusBadge";
+import type { ComplaintStatus } from "@/lib/types";
 
 export const metadata = { title: "Track your complaint" };
 
@@ -46,69 +46,48 @@ async function Tracker({ params }: { params: Promise<{ token: string }> }) {
   const step = STEP_OF[c.status];
   const pendingTeam = c.assignment?.state === "PENDING_VERIFICATION" || (!c.assignment && c.status === "TRIAGED");
 
+  const severity = c.severity ? c.severity.charAt(0) + c.severity.slice(1).toLowerCase() : null;
+  const timeline = [...c.history].reverse().map((h) => ({ title: STATUS_LABEL[h.status], note: h.note, meta: when(h.at, true), state: "done" as const }));
+
   return (
-    <article className="mx-auto max-w-2xl space-y-5">
-      <header className="card card-pad">
-        <div className="flex items-start gap-4">
-          <CategoryIcon category={c.category} className="h-14 w-14" />
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-sm font-semibold text-slate-500">{c.ticketId}</p>
-            <h1 className="mt-0.5 text-2xl font-extrabold leading-tight text-slate-900">{c.title}</h1>
-            <div className="mt-3">
-              <StatusBadge status={c.status} />
-            </div>
-          </div>
-        </div>
-        {c.summary ? <p className="mt-4 leading-relaxed text-slate-600">{c.summary}</p> : null}
-
+    <IssueTimelineView
+      chips={
+        <>
+          <Chip tone="ink">{c.ticketId}</Chip>
+          <Chip tone={c.status === "CLOSED" ? "green" : c.status === "REJECTED" ? "rose" : "plain"}>{STATUS_LABEL[c.status]}</Chip>
+          {severity ? <Chip tone={severityTone(c.severity)}>{"●"} {severity}</Chip> : null}
+        </>
+      }
+      title={severity ? `${CATEGORY_LABEL[c.category]} reported, ${severity} priority` : c.title}
+      description={c.summary}
+      timeline={timeline}
+      facts={[
+        { label: "Issue ID", value: <span className="font-mono">{c.ticketId}</span> },
+        { label: "Category", value: CATEGORY_LABEL[c.category] },
+        { label: "Team", value: c.queue, note: pendingTeam ? "Suggested. Staff will confirm before anything is promised." : undefined },
+        { label: "Status", value: STATUS_LABEL[c.status] },
+        { label: "Location", value: <span className="font-mono">{c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}</span> },
+        { label: "Reported", value: when(c.createdAt, true) },
+        { label: "Review", value: c.needsHumanReview ? "A person will review this" : "Reviewed" },
+      ]}
+    >
+      <section className="rounded-xl border-2 border-slate-900 bg-[var(--paper)] p-5 shadow-[4px_4px_0_0_var(--ink)] sm:p-6">
+        <h2 className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Progress</h2>
         {step !== undefined ? <Progress current={step} status={c.status} /> : <SpecialStatus status={c.status} />}
-      </header>
-
-      <section className="card card-pad">
-        <h2 className="text-lg font-bold text-slate-900">Details</h2>
-        <dl className="mt-4 grid gap-5 text-sm sm:grid-cols-2">
-          <Fact label="Type of problem" value={CATEGORY_LABEL[c.category]} />
-          <Fact
-            label="Team"
-            value={c.queue}
-            note={pendingTeam ? "Suggested. Staff will confirm before anything is promised." : undefined}
-          />
-          <div>
-            <dt className="text-slate-500">Severity (suggested)</dt>
-            <dd className="mt-1">
-              <SeverityBadge severity={c.severity} />
-            </dd>
-          </div>
-          <Fact label="Reported" value={when(c.createdAt, true)} />
-          <Fact label="Review" value={c.needsHumanReview ? "A person will review this" : "Reviewed"} />
-        </dl>
       </section>
-
-      <Timeline c={c} />
-
-      <p className="flex gap-2.5 rounded-2xl border border-slate-200 bg-white/70 p-4 text-xs leading-relaxed text-slate-500">
+      <p className="flex gap-2.5 rounded-xl border border-slate-300 bg-white/70 p-4 text-xs leading-relaxed text-slate-500">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
         Keep this link private: anyone who has it can see this page. Sudhaar is a demo service; the team shown is a demo queue and not an
         official government department.
       </p>
-    </article>
-  );
-}
-
-function Fact({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div>
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="mt-1 font-semibold text-slate-900">{value}</dd>
-      {note ? <dd className="mt-1 text-xs text-slate-500">{note}</dd> : null}
-    </div>
+    </IssueTimelineView>
   );
 }
 
 function Progress({ current, status }: { current: number; status: ComplaintStatus }) {
   const bar = statusTone(status).bar;
   return (
-    <div className="mt-6" role="group" aria-label={`Progress: step ${current + 1} of ${STEPS.length}, ${STEPS[current]}`}>
+    <div className="mt-5" role="group" aria-label={`Progress: step ${current + 1} of ${STEPS.length}, ${STEPS[current]}`}>
       <ol className="grid grid-cols-5">
         {STEPS.map((label, i) => {
           const done = i < current || status === "CLOSED";
@@ -145,32 +124,5 @@ function SpecialStatus({ status }: { status: ComplaintStatus }) {
       {warn ? <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /> : <Info className="mt-0.5 h-5 w-5 shrink-0" />}
       <p>{text}</p>
     </div>
-  );
-}
-
-function Timeline({ c }: { c: Complaint }) {
-  const items = [...c.history].reverse(); // newest first
-  return (
-    <section className="card card-pad">
-      <h2 className="text-lg font-bold text-slate-900">Timeline</h2>
-      <ol className="mt-5">
-        {items.map((h, i) => {
-          const tone = statusTone(h.status);
-          return (
-            <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
-              {i < items.length - 1 ? <span className="absolute left-[15px] top-8 h-full w-px bg-slate-200" /> : null}
-              <span className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${i === 0 ? tone.bar : "bg-slate-100"} ${i === 0 ? "text-white" : "text-slate-500"}`}>
-                {i === 0 ? <tone.Icon className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-              </span>
-              <div className="min-w-0">
-                <p className="font-semibold text-slate-900">{STATUS_LABEL[h.status]}</p>
-                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{h.note}</p>
-                <p className="mt-1 text-xs text-slate-400">{when(h.at, true)}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
 }
