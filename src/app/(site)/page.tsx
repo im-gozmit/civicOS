@@ -99,7 +99,12 @@ export default function Home() {
         <div className="hero-wash absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" aria-hidden />
         <div className="hero-wash absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" aria-hidden />
 
-        <div className="container-page relative grid min-h-[36rem] items-end gap-10 pt-24 lg:grid-cols-[1.2fr_0.8fr]">
+        {/* Where it was built, right under the navbar */}
+        <div className="container-page relative pt-[4.75rem]">
+          <BuildathonBanner />
+        </div>
+
+        <div className="container-page relative grid min-h-[34rem] items-end gap-10 pt-8 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="animate-rise self-start pb-14 lg:pb-20">
             <h1 className="hero-h1 text-4xl font-black leading-[1.02] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-5xl lg:text-6xl">
               Spotted a civic problem?
@@ -147,9 +152,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ---------- Where it was built ---------- */}
-      <BuildathonBanner />
 
       {/* ---------- Ticker ---------- */}
       <div className="overflow-hidden border-y-2 border-slate-900 bg-slate-900 py-3 text-slate-50" aria-hidden>

@@ -1,9 +1,12 @@
-/** Slim strip under the hero: where the project was built. Azad Reads and Azad Labs logos sit at the two ends. */
+/**
+ * Compact bar at the top of the hero, under the navbar: where the project was built. Azad Reads and Azad Labs
+ * logos sit at the two ends. It is a dark, slightly see-through bar so it reads on the photo and on the plain look.
+ */
 export function BuildathonBanner() {
   const logo = "h-9 w-9 shrink-0 rounded-md border border-white/30 object-cover";
   return (
-    <div className="border-y-2 border-slate-900 bg-slate-900 text-slate-100">
-      <div className="container-page flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-2.5 text-sm">
+    <div className="rounded-xl border border-white/20 bg-slate-900/85 text-slate-100 shadow-lg backdrop-blur-md">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-2 text-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/azad-reads.jpg" alt="Azad Reads logo: an open book with colourful pages" width={36} height={36} className={logo} />
         <span className="rounded-lg border border-white/30 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 sm:text-xs">
