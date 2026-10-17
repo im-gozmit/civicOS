@@ -316,7 +316,7 @@ export default function Home() {
 /** A pure-CSS phone showing the WhatsApp conversation, so visitors see what to expect. */
 function PhoneMock() {
   return (
-    <div className="relative mx-auto w-full max-w-[260px] rotate-2 md:max-w-none animate-rise [animation-delay:120ms]" aria-hidden>
+    <div className="phone-zoom relative mx-auto w-[260px] rotate-2 animate-rise [animation-delay:120ms] md:w-full" aria-hidden>
       <span className="absolute -left-6 top-10 z-10 -rotate-6 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1.5 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
         Ticket in seconds
       </span>

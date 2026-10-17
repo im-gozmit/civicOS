@@ -344,3 +344,29 @@ html[data-view="classic"] .hero-card .wa-step {
   border-color: rgb(26 23 19 / 0.15);
   background-color: rgb(26 23 19 / 0.04);
 }
+
+/*
+  The WhatsApp phone in the hero. Below the desktop layout it stands alone, so it is enlarged to fill the space
+  (smaller windows get a smaller boost so it never spills out). In the desktop layout it is tucked beside the statue.
+*/
+@media (max-width: 1105px) {
+  .phone-zoom {
+    zoom: 1.7;
+  }
+}
+@media (max-width: 520px) {
+  .phone-zoom {
+    zoom: 1.5;
+  }
+}
+@media (max-width: 430px) {
+  .phone-zoom {
+    zoom: 1.3;
+  }
+}
+@media (max-width: 370px) {
+  .phone-zoom {
+    zoom: 1.15;
+  }
+}
+
