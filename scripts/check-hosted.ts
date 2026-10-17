@@ -18,6 +18,17 @@ async function main() {
   const counts = await query<{ n: string | number }>("select count(*) as n from complaints");
   console.log("  complaints stored:", Number(counts[0].n));
 
+  // Write, read back and delete one temporary conversation row, through the same code the app uses.
+  const { withRepo } = await import("../src/lib/repo.ts");
+  const key = "check-" + Date.now().toString(36);
+  const sample = { senderKey: key, phone: "910000000000", state: "AWAITING_LOCATION" as const, updatedAt: new Date().toISOString() };
+  await withRepo((r) => r.saveConversation(sample));
+  const kind = await query<{ t: string }>("select jsonb_typeof(data) as t from conversations where sender_key = $1", [key]);
+  const back2 = await withRepo((r) => r.getConversation(key));
+  await query("delete from conversations where sender_key = $1", [key]);
+  const dbOk = kind[0]?.t === "object" && back2?.state === "AWAITING_LOCATION";
+  console.log("Database write test:", dbOk ? "OK (stored as a JSON object and read back)" : "FAILED (stored as " + kind[0]?.t + ")");
+
   // Round trip through the real storage layer with a tiny file, then delete it.
   const name = "check-" + Date.now().toString(36) + ".png";
   const bytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
@@ -28,7 +39,7 @@ async function main() {
   console.log("Photo storage:", process.env.SUPABASE_URL ? "Supabase bucket" : "local folder", ok ? "upload, read back and delete: OK" : "FAILED to read back what was uploaded");
 
   await closeDb();
-  if (!ok) process.exit(1);
+  if (!ok || !dbOk) process.exit(1);
 }
 
 main().catch((err) => {

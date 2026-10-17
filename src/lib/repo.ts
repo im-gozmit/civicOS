@@ -10,8 +10,13 @@ interface ComplaintRow {
   data: Complaint;
 }
 
+/** Older rows may hold the JSON as a quoted string; read them as the object they were meant to be. */
+function asObject<T>(value: T | string): T {
+  return typeof value === "string" ? (JSON.parse(value) as T) : value;
+}
+
 function fromRow(row: ComplaintRow): Complaint {
-  const c = structuredClone(row.data);
+  const c = structuredClone(asObject(row.data));
   c.senderPhone = decryptField(c.senderPhone);
   return c;
 }
@@ -82,10 +87,9 @@ export class Repo {
   /** Current status of several complaints at once (used to label duplicate candidates). */
   async statusesOf(ids: string[]): Promise<Record<string, ComplaintStatus>> {
     if (ids.length === 0) return {};
-    const rows = await this.tx.query<{ id: string; status: ComplaintStatus }>(
-      "select id, status from complaints where id = any($1::uuid[])",
-      [`{${ids.join(",")}}`],
-    );
+    // One simple parameter per id: the hosted driver handles those the same way as the local one.
+    const marks = ids.map((_, i) => "$" + (i + 1) + "::uuid").join(", ");
+    const rows = await this.tx.query<{ id: string; status: ComplaintStatus }>(`select id, status from complaints where id in (${marks})`, ids);
     return Object.fromEntries(rows.map((r) => [r.id, r.status]));
   }
 
@@ -93,7 +97,7 @@ export class Repo {
   async fileIsKnown(file: string): Promise<boolean> {
     const rows = await this.tx.query(
       `select 1 from complaints
-        where data->'mediaFiles' ? $1 or data->'audioFiles' ? $1 or data @> $2::jsonb
+        where data->'mediaFiles' ? $1 or data->'audioFiles' ? $1 or data @> $2::text::jsonb
         limit 1`,
       [file, JSON.stringify({ repairChecks: [{ file }] })],
     );
@@ -108,13 +112,13 @@ export class Repo {
   async insertComplaint(c: Complaint, ticketNo: number): Promise<void> {
     await this.tx.query(
       `insert into complaints (id, ticket_no, ticket_id, tracking_token, sender_key, status, category, latitude, longitude, created_at, data)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)`,
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text::jsonb)`,
       [c.id, ticketNo, c.ticketId, c.trackingToken, c.senderKey, c.status, c.category, c.latitude, c.longitude, c.createdAt, toData(c)],
     );
   }
 
   async saveComplaint(c: Complaint): Promise<void> {
-    await this.tx.query("update complaints set sender_key = $2, status = $3, category = $4, data = $5::jsonb where id = $1", [
+    await this.tx.query("update complaints set sender_key = $2, status = $3, category = $4, data = $5::text::jsonb where id = $1", [
       c.id,
       c.senderKey,
       c.status as ComplaintStatus,
@@ -125,7 +129,7 @@ export class Repo {
 
   // ---- notifications ----
   async insertNotification(n: Notification): Promise<void> {
-    await this.tx.query("insert into notifications (id, complaint_id, state, created_at, data) values ($1, $2, $3, $4, $5::jsonb)", [
+    await this.tx.query("insert into notifications (id, complaint_id, state, created_at, data) values ($1, $2, $3, $4, $5::text::jsonb)", [
       n.id,
       n.complaintId,
       n.state,
@@ -136,16 +140,16 @@ export class Repo {
 
   async getNotification(id: string, lock = false): Promise<Notification | undefined> {
     const rows = await this.tx.query<{ data: Notification }>(`select data from notifications where id = $1${lock ? " for update" : ""}`, [id]);
-    return rows[0]?.data;
+    return rows[0] ? asObject(rows[0].data) : undefined;
   }
 
   async saveNotification(n: Notification): Promise<void> {
-    await this.tx.query("update notifications set state = $2, data = $3::jsonb where id = $1", [n.id, n.state, JSON.stringify(n)]);
+    await this.tx.query("update notifications set state = $2, data = $3::text::jsonb where id = $1", [n.id, n.state, JSON.stringify(n)]);
   }
 
   async notificationsFor(complaintId: string, limit = 5): Promise<Notification[]> {
     const rows = await this.tx.query<{ data: Notification }>("select data from notifications where complaint_id = $1 order by created_at desc limit $2", [complaintId, limit]);
-    return rows.map((r) => r.data);
+    return rows.map((r) => asObject(r.data));
   }
 
   async pendingNotificationIds(): Promise<string[]> {
@@ -162,7 +166,7 @@ export class Repo {
   async getConversation(senderKey: string, lock = false): Promise<Conversation | undefined> {
     const rows = await this.tx.query<{ data: Conversation }>(`select data from conversations where sender_key = $1${lock ? " for update" : ""}`, [senderKey]);
     if (!rows[0]) return undefined;
-    const conv = structuredClone(rows[0].data);
+    const conv = structuredClone(asObject(rows[0].data));
     conv.phone = decryptField(conv.phone);
     return conv;
   }
@@ -170,7 +174,7 @@ export class Repo {
   async saveConversation(conv: Conversation): Promise<void> {
     const data = JSON.stringify({ ...conv, phone: encryptField(conv.phone), updatedAt: new Date().toISOString() });
     await this.tx.query(
-      `insert into conversations (sender_key, updated_at, data) values ($1, now(), $2::jsonb)
+      `insert into conversations (sender_key, updated_at, data) values ($1, now(), $2::text::jsonb)
        on conflict (sender_key) do update set updated_at = now(), data = excluded.data`,
       [conv.senderKey, data],
     );
