@@ -15,6 +15,14 @@ function remote(): { url: string; key: string } | null {
   return url && key ? { url, key } : null;
 }
 
+/**
+ * Supabase has two kinds of server key. The newer "sb_secret_..." keys are not JWTs and must be
+ * sent in the apikey header only; the older service_role JWT works in both headers.
+ */
+function authHeaders(key: string): Record<string, string> {
+  return key.startsWith("sb_secret_") ? { apikey: key } : { Authorization: `Bearer ${key}`, apikey: key };
+}
+
 function localDir() {
   return path.join(process.env.DATA_DIR || path.join(process.cwd(), ".data"), "media");
 }
@@ -35,7 +43,7 @@ export async function putFile(name: string, bytes: Buffer, mime: string): Promis
   }
   const res = await fetch(`${r.url}/storage/v1/object/${BUCKET}/${name}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${r.key}`, apikey: r.key, "Content-Type": mime, "x-upsert": "true" },
+    headers: { ...authHeaders(r.key), "Content-Type": mime, "x-upsert": "true" },
     body: new Uint8Array(bytes),
   });
   if (!res.ok) throw new Error(`storage upload failed (${res.status})`);
@@ -46,7 +54,7 @@ export async function getFile(name: string): Promise<Buffer | null> {
   const r = remote();
   if (!r) return readFile(path.join(localDir(), name)).catch(() => null);
   const res = await fetch(`${r.url}/storage/v1/object/${BUCKET}/${name}`, {
-    headers: { Authorization: `Bearer ${r.key}`, apikey: r.key },
+    headers: authHeaders(r.key),
   });
   if (!res.ok) return null;
   return Buffer.from(await res.arrayBuffer());
@@ -61,7 +69,7 @@ export async function deleteFile(name: string): Promise<void> {
   }
   await fetch(`${r.url}/storage/v1/object/${BUCKET}/${name}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${r.key}`, apikey: r.key },
+    headers: authHeaders(r.key),
   }).catch(() => undefined);
 }
 
@@ -71,7 +79,7 @@ export async function ensureBucket(): Promise<"created" | "exists" | "local"> {
   if (!r) return "local";
   const res = await fetch(`${r.url}/storage/v1/bucket`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${r.key}`, apikey: r.key, "Content-Type": "application/json" },
+    headers: { ...authHeaders(r.key), "Content-Type": "application/json" },
     body: JSON.stringify({ id: BUCKET, name: BUCKET, public: false, file_size_limit: 12 * 1024 * 1024 }),
   });
   if (res.ok) return "created";
