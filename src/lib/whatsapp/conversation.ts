@@ -88,6 +88,7 @@ async function getConversation(msg: InboundMessage): Promise<Conversation> {
     const now = new Date().toISOString();
     if (existing) {
       existing.phone = msg.from;
+      existing.lastInboundAt = now;
       if (existing.pending && Date.now() - Date.parse(existing.pending.startedAt) > PENDING_TTL_MS) {
         existing.pending = undefined;
         existing.state = "IDLE";
@@ -95,7 +96,7 @@ async function getConversation(msg: InboundMessage): Promise<Conversation> {
       existing.updatedAt = now;
       return structuredClone(existing);
     }
-    const fresh: Conversation = { senderKey: msg.senderKey, phone: msg.from, state: "IDLE", updatedAt: now };
+    const fresh: Conversation = { senderKey: msg.senderKey, phone: msg.from, state: "IDLE", lastInboundAt: now, updatedAt: now };
     store.conversations[msg.senderKey] = fresh;
     return structuredClone(fresh);
   });

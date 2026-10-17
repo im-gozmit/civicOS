@@ -52,6 +52,7 @@ export interface Complaint {
   audioFiles: string[];
   createdAt: string;
   history: HistoryEntry[];
+  internalNotes?: Array<{ at: string; by: string; text: string }>; // admin-only, never public
 }
 
 export interface PendingReport {
@@ -61,10 +62,22 @@ export interface PendingReport {
   startedAt: string;
 }
 
+export interface Notification {
+  id: string;
+  complaintId: string;
+  text: string;
+  state: "PENDING" | "SENT" | "FAILED";
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  sentAt: string | null;
+}
+
 export interface Conversation {
   senderKey: string;
   phone: string;
   state: "IDLE" | "AWAITING_LOCATION";
+  lastInboundAt?: string; // WhatsApp free-form replies are only allowed within 24h of this
   pending?: PendingReport;
   lastLocation?: { latitude: number; longitude: number; at: string };
   updatedAt: string;

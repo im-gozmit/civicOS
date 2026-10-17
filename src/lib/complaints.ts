@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "crypto";
 import { withStore } from "@/lib/localStore";
-import type { Category, Complaint, HistoryEntry, Severity } from "@/lib/types";
+import { canTransition, NEEDS_REASON, STATUS_LABEL } from "@/lib/transitions";
+import type { Category, Complaint, ComplaintStatus, HistoryEntry, Severity } from "@/lib/types";
 
 // --- Triage (placeholder) ---------------------------------------------------------------------
 // Real multimodal AI triage plugs in here later. Until then this is a deterministic keyword guess
@@ -149,4 +150,84 @@ export function getOwnByTicket(senderKey: string, ticketId: string): Promise<Com
   return withStore((s) =>
     s.complaints.find((c) => c.senderKey === senderKey && c.ticketId.toLowerCase() === ticketId.toLowerCase()),
   );
+}
+
+// --- Admin operations -------------------------------------------------------------------------
+
+export const ALL_QUEUES = Array.from(new Set(Object.values(QUEUES)));
+
+export function listAll(): Promise<Complaint[]> {
+  return withStore((s) => [...s.complaints].reverse());
+}
+
+export function getById(id: string): Promise<Complaint | undefined> {
+  return withStore((s) => s.complaints.find((c) => c.id === id));
+}
+
+export type ChangeResult = { ok: true; complaint: Complaint; notificationId: string } | { ok: false; error: string };
+
+/**
+ * Validated status change. The status, the history entry and the notification-outbox row are
+ * written in ONE store transaction. Delivering the WhatsApp message happens afterwards and its
+ * failure never undoes the status change.
+ */
+export function changeStatus(
+  id: string,
+  to: ComplaintStatus,
+  publicNote: string,
+  internalNote: string,
+  adminLabel: string,
+  trackUrl: (c: Complaint) => string,
+): Promise<ChangeResult> {
+  return withStore((store) => {
+    const c = store.complaints.find((x) => x.id === id);
+    if (!c) return { ok: false as const, error: "Complaint not found." };
+    if (!canTransition(c.status, to)) {
+      return { ok: false as const, error: `Cannot move from ${c.status} to ${to}.` };
+    }
+    if (NEEDS_REASON.includes(to) && !publicNote.trim() && !internalNote.trim()) {
+      return { ok: false as const, error: `A reason is required for ${to}.` };
+    }
+    const now = new Date().toISOString();
+    const from = c.status;
+    c.status = to;
+    c.history.push({
+      status: to,
+      note: publicNote.trim() || `Status changed from ${from} to ${to}.`,
+      actor: "admin",
+      at: now,
+    });
+    // Internal notes are kept in the admin log only and never shown to the citizen.
+    if (internalNote.trim()) {
+      c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: internalNote.trim() }];
+    }
+    const notificationId = randomUUID();
+    store.notifications.push({
+      id: notificationId,
+      complaintId: c.id,
+      text:
+        `📣 Update on ${c.ticketId}: ${STATUS_LABEL[to]}.` +
+        (publicNote.trim() ? `\n${publicNote.trim()}` : "") +
+        `\nTrack: ${trackUrl(c)}`,
+      state: "PENDING",
+      attempts: 0,
+      lastError: null,
+      createdAt: now,
+      sentAt: null,
+    });
+    return { ok: true as const, complaint: structuredClone(c), notificationId };
+  });
+}
+
+export function assignQueue(id: string, queue: string, adminLabel: string): Promise<ChangeResult | { ok: false; error: string }> {
+  return withStore((store) => {
+    const c = store.complaints.find((x) => x.id === id);
+    if (!c) return { ok: false as const, error: "Complaint not found." };
+    if (!ALL_QUEUES.includes(queue)) return { ok: false as const, error: "Unknown queue." };
+    c.queue = queue;
+    const now = new Date().toISOString();
+    c.history.push({ status: c.status, note: `Moved to ${queue}.`, actor: "admin", at: now });
+    c.internalNotes = [...(c.internalNotes ?? []), { at: now, by: adminLabel, text: `Queue set to ${queue}` }];
+    return { ok: true as const, complaint: structuredClone(c), notificationId: "" };
+  });
 }
