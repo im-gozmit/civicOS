@@ -9,8 +9,17 @@
 
 :root {
   color-scheme: light;
+  --vh: 1vh; /* one percent of the window height, corrected for the desktop zoom below */
   --background: #f6f8fb;
   --foreground: #0f172a;
+}
+
+@theme {
+  --breakpoint-sm: 80rem;
+  --breakpoint-md: 96rem;
+  --breakpoint-lg: 128rem;
+  --breakpoint-xl: 160rem;
+  --breakpoint-2xl: 192rem;
 }
 
 @theme inline {
@@ -23,6 +32,21 @@
 
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
   --shadow-pop: 0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -16px rgb(15 23 42 / 0.25);
+}
+
+/*
+  Desktop zoom: on screens at least 768px wide the whole page is drawn at 200%, like the browser
+  zoom the owner prefers, so people do not have to zoom in by hand. The responsive breakpoints in
+  @theme below are doubled to match: the layout then behaves as if the window were half as wide,
+  exactly as with a real 200% browser zoom. Phones and narrow windows are not scaled.
+*/
+@media (min-width: 768px) {
+  html {
+    zoom: 2;
+  }
+  :root {
+    --vh: 0.5vh;
+  }
 }
 
 html {

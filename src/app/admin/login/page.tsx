@@ -5,7 +5,7 @@ export const metadata = { title: "Staff sign in" };
 
 export default function AdminLoginPage() {
   return (
-    <div className="bg-hero min-h-[calc(100vh-4rem)]">
+    <div className="bg-hero min-h-[calc(100*var(--vh)-4rem)]">
       <main className="container-page flex justify-center py-14 sm:py-20">
         <div className="w-full max-w-md">
           <div className="card card-pad shadow-pop">

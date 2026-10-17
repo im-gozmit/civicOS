@@ -136,7 +136,7 @@ export function IssueMap() {
       </div>
 
       <div className="card relative overflow-hidden p-1.5">
-        <div ref={el} className="h-[58vh] min-h-[360px] w-full rounded-xl" role="application" aria-label="Map of reported problems" />
+        <div ref={el} className="h-[calc(58*var(--vh))] min-h-[360px] w-full rounded-xl" role="application" aria-label="Map of reported problems" />
         {markers && markers.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
             <p className="rounded-xl bg-white/95 px-4 py-3 text-center text-sm font-medium text-slate-600 shadow-pop">No problems have been reported yet.</p>
