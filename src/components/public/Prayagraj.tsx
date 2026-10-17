@@ -1,22 +1,28 @@
-/** Strip announcing where the project was built: Azad Reads on the left, Azad Labs on the right. */
+/** Slim strip under the hero: where the project was built. Azad Reads and Azad Labs logos sit at the two ends. */
 export function BuildathonBanner() {
-  const tile = "h-14 w-14 shrink-0 rounded-lg border-2 border-slate-900 object-cover shadow-[3px_3px_0_0_var(--ink)] sm:h-16 sm:w-16";
+  const logo = "h-9 w-9 shrink-0 rounded-md border border-white/30 object-cover";
   return (
-    <div className="border-b-2 border-slate-900 bg-amber-300">
-      <div className="container-page grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 sm:gap-6">
+    <div className="border-y-2 border-slate-900 bg-slate-900 text-slate-100">
+      <div className="container-page flex flex-wrap items-center justify-center gap-x-4 gap-y-2 py-2.5 text-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/azad-reads.jpg" alt="Azad Reads logo: an open book with colourful pages" width={64} height={64} className={tile} />
-        <div className="text-center">
-          <p className="font-display text-lg font-extrabold leading-tight text-slate-900 sm:text-2xl">
-            Built during the <span className="italic">Azad Buildathon</span>
-          </p>
-          <p className="mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-slate-800 sm:text-xs">
-            Azad Reads <span className="mx-1 text-teal-700">✦</span> Azad Labs <span className="mx-1 text-teal-700">✦</span>{" "}
-            <span lang="hi" className="font-[family-name:var(--font-deva)] normal-case tracking-normal">प्रयागराज</span>
-          </p>
-        </div>
+        <img src="/azad-reads.jpg" alt="Azad Reads logo: an open book with colourful pages" width={36} height={36} className={logo} />
+        <span className="rounded-lg border border-white/30 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200 sm:text-xs">
+          Built during the Azad Buildathon
+        </span>
+        <span className="text-center">
+          Made with <strong className="font-semibold text-white">Azad Reads</strong> and <strong className="font-semibold text-white">Azad Labs</strong> in{" "}
+          <strong className="font-semibold text-white">Prayagraj</strong> <span lang="hi" className="font-[family-name:var(--font-deva)]">(प्रयागराज)</span>
+        </span>
+        <a
+          href="https://github.com/im-gozmit"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs underline decoration-white/40 underline-offset-4 transition hover:text-amber-200 hover:decoration-amber-200"
+        >
+          Built by Mayank <span aria-hidden>&#8599;</span>
+        </a>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/azad-labs.jpg" alt="Azad Labs logo: a figure with a cape riding a rocket" width={64} height={64} className={tile} />
+        <img src="/azad-labs.jpg" alt="Azad Labs logo: a figure with a cape riding a rocket" width={36} height={36} className={logo} />
       </div>
     </div>
   );
