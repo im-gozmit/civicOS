@@ -12,8 +12,10 @@ import {
   Lock,
   MapPin,
   MessageCircle,
+  Send,
   ShieldCheck,
   Sparkles,
+  Timer,
   Trash2,
   UserCheck,
   Waves,
@@ -46,9 +48,14 @@ export default function Home() {
 
         <div className="container-page relative grid min-h-[36rem] items-end gap-10 pt-24 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="animate-rise self-center pb-14 lg:pb-20">
+            <div className="flex flex-wrap items-center gap-2">
             <p className="hero-pill inline-flex items-center gap-2 rounded-md border border-white/70 bg-black/30 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">
               <MapPin className="h-4 w-4 text-amber-300" /> Prayagraj <span lang="hi" className="font-[family-name:var(--font-deva)] normal-case tracking-normal">(प्रयागराज)</span> &middot; demo service
             </p>
+            <p className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-900 bg-amber-300 px-3 py-1 font-mono text-xs font-black uppercase tracking-widest text-slate-900 shadow-[3px_3px_0_0_var(--ink)]">
+              <Timer className="h-4 w-4" /> WhatsApp complaint in under 60 seconds
+            </p>
+          </div>
             <h1 className="hero-h1 mt-6 text-5xl font-black leading-[0.98] text-white [text-shadow:0_2px_24px_rgb(0_0_0/0.35)] sm:text-6xl lg:text-7xl">
               Spotted a civic problem?
               <span className="hero-accent mt-2 block italic text-orange-500">
@@ -63,23 +70,19 @@ export default function Home() {
               </span>
             </h1>
             <p className="hero-sub mt-7 max-w-xl text-lg leading-relaxed text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.5)]">
-              Send a photo on WhatsApp or the web. AI suggests the right team, staff check it, and you get updates until it is fixed.
-              No account needed.
+              Send a photo on WhatsApp and get your complaint number in under 60 seconds. AI suggests the right team, staff check it,
+              and you get updates until it is fixed. No app, no sign-up.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/report" className="btn btn-primary px-6 py-3.5 text-base">
-                <Camera className="h-5 w-5" /> Report a problem
-              </Link>
               {wa ? (
-                <a href={wa} className="btn btn-whatsapp px-6 py-3.5 text-base">
-                  <MessageCircle className="h-5 w-5" /> Report on WhatsApp
+                <a href={wa} className="btn btn-whatsapp px-7 py-4 text-lg">
+                  <MessageCircle className="h-6 w-6" /> Report on WhatsApp <span className="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-xs text-white">60s</span>
                 </a>
-              ) : (
-                <a href="#map" className="btn btn-secondary px-6 py-3.5 text-base">
-                  See problems nearby
-                </a>
-              )}
+              ) : null}
+              <Link href="/report" className={wa ? "btn btn-secondary px-6 py-4 text-base" : "btn btn-primary px-7 py-4 text-lg"}>
+                <Camera className="h-5 w-5" /> {wa ? "Use the website instead" : "Report a problem"}
+              </Link>
             </div>
 
             <ul className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
@@ -131,27 +134,79 @@ export default function Home() {
         <IssueMap />
       </section>
 
-      {/* ---------- How it works ---------- */}
-      <section className="container-page py-10" aria-labelledby="how-title">
-        <p className="eyebrow">How it works</p>
-        <h2 id="how-title" className="mt-1 max-w-2xl text-3xl font-bold text-slate-900">From a photo to a fix, in four steps</h2>
-        <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ---------- How it works: end to end ---------- */}
+      <section id="how" className="container-page scroll-mt-24 py-12" aria-labelledby="how-title">
+        <p className="eyebrow">End to end</p>
+        <h2 id="how-title" className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] text-slate-900 sm:text-5xl">
+          Citizen <span className="text-teal-600">&rarr;</span> AI <span className="text-teal-600">&rarr;</span> Staff <span className="text-teal-600">&rarr;</span>{" "}
+          <span className="italic text-teal-600">Verified.</span>
+        </h2>
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
-            { Icon: Camera, title: "Send a photo", text: "Take a picture of the problem and share where it is. WhatsApp or the website, in English or हिन्दी." },
-            { Icon: Sparkles, title: "AI reads it", text: "It checks the photo, writes a short summary and suggests which team should handle it." },
-            { Icon: UserCheck, title: "Staff verify", text: "A person confirms or corrects the team. Nothing is promised to you before that." },
-            { Icon: Bell, title: "You get updates", text: "A message each time the status changes, and a link to follow progress until it is closed." },
-          ].map(({ Icon, title, text }, i) => (
-            <li key={title} className="card card-pad relative">
-              <span className="absolute right-5 top-4 font-display text-5xl font-extrabold text-slate-100">{i + 1}</span>
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-4 text-lg font-bold text-slate-900">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{text}</p>
+            { Icon: Camera, text: "Citizen uploads photo, voice, location" },
+            { Icon: Sparkles, text: "AI understands and classifies the issue" },
+            { Icon: UserCheck, text: "AI suggests the team, staff verify it" },
+            { Icon: Bell, text: "Staff resolve it and upload proof" },
+            { Icon: ShieldCheck, text: "AI checks the repair, a person closes the loop" },
+          ].map(({ Icon, text }, i) => (
+            <li
+              key={text}
+              className="group relative rounded-xl border-2 border-slate-900 bg-[var(--paper)] p-5 shadow-[4px_4px_0_0_var(--ink)] transition duration-300 hover:-translate-y-1 hover:shadow-[6px_8px_0_0_rgb(207_61_15/0.9)]"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-sm font-black text-teal-600">{String(i + 1).padStart(2, "0")}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 transition group-hover:bg-teal-600 group-hover:text-white">
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-5 text-base font-medium leading-snug text-slate-800">{text}</p>
+              {i < 4 ? <ArrowRight className="absolute -right-3.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 rounded-full bg-slate-900 p-0.5 text-white lg:block" aria-hidden /> : null}
             </li>
           ))}
         </ol>
+
+        {/* The 60-second promise */}
+        <div className="mt-8 overflow-hidden rounded-2xl border-2 border-slate-900 bg-slate-900 p-6 text-white shadow-[8px_8px_0_0_rgb(207_61_15/0.9)] sm:p-10">
+          <div className="grid items-center gap-8 lg:grid-cols-[auto_1fr_auto]">
+            <div className="flex items-end gap-3">
+              <span className="font-display text-8xl font-black leading-none text-orange-400 sm:text-9xl">60</span>
+              <span className="pb-3 font-mono text-sm font-bold uppercase leading-tight tracking-widest text-white/80">seconds<br />on WhatsApp</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-black leading-tight sm:text-3xl">From &ldquo;Hi&rdquo; to a complaint number, before you finish your chai.</h3>
+              <ol className="mt-5 grid gap-3 sm:grid-cols-4">
+                {[
+                  { t: "0:05", label: "Say Hi", Icon: MessageCircle },
+                  { t: "0:20", label: "Send a photo", Icon: Camera },
+                  { t: "0:40", label: "Share your location pin", Icon: MapPin },
+                  { t: "0:60", label: "Get your number and link", Icon: Send },
+                ].map(({ t, label, Icon }) => (
+                  <li key={label} className="rounded-lg border border-white/15 bg-white/5 p-3">
+                    <span className="font-mono text-xs font-bold text-orange-300">{t}</span>
+                    <span className="mt-1 flex items-center gap-2 text-sm font-semibold">
+                      <Icon className="h-4 w-4 shrink-0 text-orange-300" /> {label}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden>
+                <div className="sixty-fill h-full rounded-full bg-gradient-to-r from-amber-300 via-orange-500 to-teal-600" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              {wa ? (
+                <a href={wa} className="btn btn-whatsapp px-6 py-3.5 text-base">
+                  <MessageCircle className="h-5 w-5" /> Start on WhatsApp
+                </a>
+              ) : (
+                <Link href="/report" className="btn btn-primary px-6 py-3.5 text-base">
+                  <Camera className="h-5 w-5" /> Report a problem
+                </Link>
+              )}
+              <p className="text-center text-xs text-white/60">No app. No sign-up. Hindi or English.</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ---------- What you can report ---------- */}
