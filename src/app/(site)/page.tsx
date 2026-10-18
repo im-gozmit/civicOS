@@ -5,24 +5,20 @@ import {
   Camera,
   CheckCheck,
   Construction,
-  Droplets,
-  EyeOff,
   Languages,
-  Lightbulb,
   Lock,
   MessageCircle,
   Send,
   ShieldCheck,
   Sparkles,
   Timer,
-  Trash2,
   UserCheck,
-  Waves,
 } from "lucide-react";
 import { BadgeCheck, Copy, Eye, FileText, Gauge, Mic, Route, ShieldAlert } from "lucide-react";
 import { IssueMap } from "@/components/public/IssueMap";
 import { BuildathonBanner } from "@/components/public/Prayagraj";
 import { AzadStatue } from "@/components/public/AzadStatue";
+import { Promises, WhatYouCanReport } from "@/components/public/HomeSections";
 
 function WhatsAppGlyph({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -253,53 +249,11 @@ export default function Home() {
         </ul>
       </section>
 
-      {/* ---------- What you can report ---------- */}
-      <section className="container-page py-10" aria-labelledby="what-title">
-        <p className="eyebrow">What you can report</p>
-        <h2 id="what-title" className="mt-1 text-3xl font-bold text-slate-900">Everyday problems on your street</h2>
-        <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {[
-            { Icon: Construction, label: "Potholes and damaged roads", tone: "bg-orange-50 text-orange-600" },
-            { Icon: Trash2, label: "Garbage and overflowing bins", tone: "bg-lime-50 text-lime-700" },
-            { Icon: Waves, label: "Blocked or overflowing drains", tone: "bg-cyan-50 text-cyan-700" },
-            { Icon: Droplets, label: "Water leaks and supply issues", tone: "bg-sky-50 text-sky-600" },
-            { Icon: Lightbulb, label: "Broken street lights", tone: "bg-amber-50 text-amber-600" },
-          ].map(({ Icon, label, tone }) => (
-            <li key={label}>
-              <Link href="/report" className="card group flex h-full flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-pop">
-                <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}>
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold leading-snug text-slate-800">{label}</span>
-                <ArrowRight className="mt-auto h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-teal-600" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* ---------- What you can report (illustrated) ---------- */}
+      <WhatYouCanReport />
 
-      {/* ---------- Trust ---------- */}
-      <section className="container-page py-10" aria-labelledby="trust-title">
-        <div className="card overflow-hidden">
-          <div className="grid gap-px bg-slate-200/70 md:grid-cols-3">
-            {[
-              { Icon: ShieldCheck, title: "A person always decides", text: "The AI only suggests. Staff check the team and decide when something is fixed." },
-              { Icon: EyeOff, title: "Private by design", text: "Photos and contact details stay private. The public map shows only approximate spots." },
-              { Icon: CheckCheck, title: "Honest about what it is", text: "A demo service. The teams are demo queues, not official departments." },
-            ].map(({ Icon, title, text }) => (
-              <div key={title} className="bg-white p-6">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <h3 id={title === "A person always decides" ? "trust-title" : undefined} className="mt-4 text-lg font-bold text-slate-900">
-                  {title}
-                </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ---------- Our promises (illustrated) ---------- */}
+      <Promises />
 
       {/* ---------- Final call to action ---------- */}
       <section className="container-page py-10">

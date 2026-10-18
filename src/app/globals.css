@@ -400,3 +400,27 @@ html[data-view="classic"] .hero-card .wa-step {
     zoom: 1.125;
   }
 }
+
+/* ---- Small animations inside the illustrated home sections (stopped by the reduced-motion rule above) ---- */
+@keyframes scene-wobble { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes scene-lid { 0%, 55%, 100% { transform: rotate(0deg); } 70%, 85% { transform: rotate(-16deg); } }
+@keyframes scene-flow { to { transform: translateX(-40px); } }
+@keyframes scene-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes scene-drop { 0% { transform: translateY(0); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(44px); opacity: 0; } }
+@keyframes scene-ripple { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.12); opacity: .6; } }
+@keyframes scene-bulb { 0%, 100% { opacity: 1; } 8% { opacity: .55; } 12% { opacity: 1; } 50% { opacity: .85; } }
+@keyframes scene-beam { 0%, 100% { opacity: .9; } 50% { opacity: .6; } }
+@keyframes scene-dash { to { stroke-dashoffset: -20; } }
+@keyframes scene-pop { 0%, 60%, 100% { transform: scale(1); } 75% { transform: scale(1.18); } }
+@keyframes scene-stamp { 0%, 70%, 100% { transform: scale(1); } 80% { transform: scale(1.08); } }
+.scene-wobble { animation: scene-wobble 2.4s ease-in-out infinite; }
+.scene-lid { animation: scene-lid 3.4s ease-in-out infinite; }
+.scene-flow { animation: scene-flow 2.4s linear infinite; }
+.scene-float { animation: scene-float 3s ease-in-out infinite; }
+.scene-drop { animation: scene-drop 1.7s ease-in infinite; }
+.scene-ripple { transform-box: fill-box; transform-origin: center; animation: scene-ripple 3s ease-in-out infinite; }
+.scene-bulb { animation: scene-bulb 3.2s ease-in-out infinite; }
+.scene-beam { animation: scene-beam 3.2s ease-in-out infinite; }
+.scene-dash { animation: scene-dash 1s linear infinite; }
+.scene-pop { transform-box: fill-box; transform-origin: center; animation: scene-pop 3s ease-in-out infinite; }
+.scene-stamp { animation: scene-stamp 4s ease-in-out infinite; }
