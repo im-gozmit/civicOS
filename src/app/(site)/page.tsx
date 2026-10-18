@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Bell,
   Camera,
   CheckCheck,
   Construction,
@@ -9,15 +8,13 @@ import {
   Lock,
   MessageCircle,
   Send,
-  ShieldCheck,
-  Sparkles,
   Timer,
-  UserCheck,
 } from "lucide-react";
-import { BadgeCheck, Copy, Eye, FileText, Gauge, Mic, Route, ShieldAlert } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import { IssueMap } from "@/components/public/IssueMap";
 import { BuildathonBanner } from "@/components/public/Prayagraj";
 import { AzadStatue } from "@/components/public/AzadStatue";
+import { AgentCrew, Journey } from "@/components/public/AgentSections";
 import { Promises, WhatYouCanReport } from "@/components/public/HomeSections";
 
 function WhatsAppGlyph({ className = "h-5 w-5" }: { className?: string }) {
@@ -186,68 +183,10 @@ export default function Home() {
       </section>
 
       {/* ---------- How it works: end to end ---------- */}
-      <section id="how" className="container-page scroll-mt-24 py-12" aria-labelledby="how-title">
-        <p className="eyebrow">End to end</p>
-        <h2 id="how-title" className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] text-slate-900 sm:text-5xl">
-          Citizen <span className="text-teal-600">&rarr;</span> Agents <span className="text-teal-600">&rarr;</span> Staff <span className="text-teal-600">&rarr;</span>{" "}
-          <span className="italic text-teal-600">Verified.</span>
-        </h2>
-        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            { Icon: Camera, text: "Citizen uploads photo, voice, location" },
-            { Icon: Sparkles, text: "Agents understand and classify the issue" },
-            { Icon: UserCheck, text: "Agents suggest the team, staff verify it" },
-            { Icon: Bell, text: "Staff resolve it and upload proof" },
-            { Icon: ShieldCheck, text: "Agents check the repair, a person closes the loop" },
-          ].map(({ Icon, text }, i) => (
-            <li
-              key={text}
-              className="group relative rounded-xl border-2 border-slate-900 bg-[var(--paper)] p-5 shadow-[4px_4px_0_0_var(--ink)] transition duration-300 hover:-translate-y-1 hover:shadow-[6px_8px_0_0_rgb(207_61_15/0.9)]"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-sm font-black text-teal-600">{String(i + 1).padStart(2, "0")}</span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 transition group-hover:bg-teal-600 group-hover:text-white">
-                  <Icon className="h-4 w-4" />
-                </span>
-              </div>
-              <p className="mt-5 text-base font-medium leading-snug text-slate-800">{text}</p>
-              {i < 4 ? <ArrowRight className="absolute -right-3.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 rounded-full bg-slate-900 p-0.5 text-white lg:block" aria-hidden /> : null}
-            </li>
-          ))}
-        </ol>
-      </section>
+      <Journey />
 
-      {/* ---------- The agent workforce ---------- */}
-      <section id="agents" className="container-page scroll-mt-24 py-12" aria-labelledby="agents-title">
-        <p className="eyebrow">Sudhaar</p>
-        <h2 id="agents-title" className="mt-3 max-w-4xl text-4xl font-black leading-[1.05] text-slate-900 sm:text-5xl">
-          Not one prompt. <span className="italic text-teal-600">A coordinated agent workforce.</span>
-        </h2>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600">
-          Each agent owns one civic job, explains what it saw, and can be upgraded on its own. They only suggest. A person always decides.
-        </p>
-
-        <ul className="mt-10 grid overflow-hidden rounded-xl border-2 border-slate-900 bg-slate-900 shadow-[6px_6px_0_0_var(--ink)] sm:grid-cols-2 lg:grid-cols-4 [&>li]:border-slate-900 gap-0.5">
-          {[
-            { Icon: Eye, name: "Vision Agent", text: "Understands the problem from a single photo and rejects pictures that are not civic issues." },
-            { Icon: Mic, name: "Speech Agent", text: "Transcribes voice notes in Hindi and English, and translates them for staff." },
-            { Icon: Gauge, name: "Severity Agent", text: "Rates urgency from low to critical, with the reason in plain words." },
-            { Icon: Route, name: "Routing Agent", text: "Suggests which team should handle it. Staff confirm before you are told." },
-            { Icon: Copy, name: "Duplicate Agent", text: "Spots repeat reports of the same problem so staff can link them." },
-            { Icon: FileText, name: "Summary Agent", text: "Writes a short, clear summary and notes hazards, so staff read one line, not a story." },
-            { Icon: ShieldAlert, name: "Safety Agent", text: "Treats captions and photo text as data, never as instructions, and flags anything doubtful." },
-            { Icon: BadgeCheck, name: "Verification Agent", text: "Gives an opinion on whether the after-repair photo shows a fix. Staff decide." },
-          ].map(({ Icon, name, text }) => (
-            <li key={name} className="group relative bg-[var(--paper)] p-5 transition duration-300 hover:bg-teal-50">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-mono text-sm font-bold text-teal-700">{name}</p>
-                <Icon className="h-4 w-4 text-slate-400 transition duration-300 group-hover:scale-125 group-hover:text-teal-600" />
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{text}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* ---------- The agent crew ---------- */}
+      <AgentCrew />
 
       {/* ---------- What you can report (illustrated) ---------- */}
       <WhatYouCanReport />

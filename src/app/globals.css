@@ -424,3 +424,24 @@ html[data-view="classic"] .hero-card .wa-step {
 .scene-dash { animation: scene-dash 1s linear infinite; }
 .scene-pop { transform-box: fill-box; transform-origin: center; animation: scene-pop 3s ease-in-out infinite; }
 .scene-stamp { animation: scene-stamp 4s ease-in-out infinite; }
+
+/* ---- Journey and agent crew on the home page ---- */
+@keyframes journey-run { 0% { left: 0; } 100% { left: calc(100% - 1.25rem); } }
+@keyframes road-march { to { background-position: 24px 0; } }
+@keyframes agent-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes agent-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes agent-ping { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes agent-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.journey-road { background: repeating-linear-gradient(90deg, var(--ink) 0 12px, transparent 12px 24px); animation: road-march 1s linear infinite; }
+.journey-dot { animation: journey-run 5s ease-in-out infinite alternate; }
+.agent-bot { animation: agent-bob 3.2s ease-in-out infinite; animation-delay: inherit; }
+.agent-card { box-shadow: 4px 4px 0 0 var(--agent, #fb923c); animation-fill-mode: both; }
+.agent-card:hover { box-shadow: 8px 10px 0 0 var(--agent, #fb923c); }
+.agent-eyes { transform-box: fill-box; transform-origin: center; animation: agent-blink 4.5s infinite; }
+.agent-antenna { animation: agent-ping 1.8s ease-in-out infinite; }
+.agent-live { animation: agent-ping 1.6s ease-in-out infinite; }
+.agent-caret { animation: agent-caret 1s steps(1) infinite; }
+.agent-grid { background-image: radial-gradient(rgb(255 255 255 / 0.09) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+@media (max-width: 1023px) { .journey-dot { display: none; } }
+@keyframes agent-scan { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(24px); } }
+.agent-scan { animation: agent-scan 2.4s ease-in-out infinite; }
